@@ -1,0 +1,78 @@
+version: '3.8'
+
+services:
+  # App Service: Container PHP-FPM dibangun penuh atas source code rilis production
+  app:
+    build:
+      context: ../../
+      dockerfile: deployment/production/Dockerfile
+    image: e-business-app-prod
+    container_name: e-business-app-prod
+    restart: always # Kebijakan Always restart bilamana instance crash di server production
+    # Penggunaan Env File di production akan berbeda dengan lokal (diset di server aslinya)
+    env_file: ../../.env 
+    volumes:
+      # Named volume digunakan untuk saling berbagi asset public static ke Web Nginx 
+      - app-files:/var/www
+    networks:
+      # Terkoneksi backend & frontend guna menjembatani lalu lintas logic dengan network lain
+      - e-business-backend
+      - e-business-frontend
+
+  # Web Service: Load balancer and Proxy Server (Menangani traffik luar ke container)
+  web:
+    image: nginx:alpine
+    container_name: e-business-web-prod
+    restart: always
+    ports:
+      - "80:80"
+      - "443:443" # Reservasi untuk integrasi sertifikat HTTPS kedepannya
+    volumes:
+      # PENTING: NO BIND MOUNT! File di-share dari volume milik 'app' service container
+      - app-files:/var/www
+      # Config dibaca read-only ('ro') agar nginx tidak punya auth memodifikasi config
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro 
+    networks:
+      - e-business-frontend
+    depends_on:
+      - app
+
+  # DB Service: Layanan Data PostgreSQL dengan security berlapis
+  db:
+    image: postgres:15-alpine
+    container_name: e-business-db-prod
+    restart: always
+    # PORT TIDAK ADA EXPOSE. Database strict hanya bisa diconsume inter-containers. Total Isolasi.
+    environment:
+      POSTGRES_DB: ${DB_DATABASE}
+      POSTGRES_USER: ${DB_USERNAME}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - db-prod-data:/var/lib/postgresql/data # Data Mount Persistence 
+    networks:
+      # Berada eksklusif pada network backend yang termute access ke host external
+      - e-business-backend
+    
+  # Redis Service: Caching/Session Service untuk Production
+  redis:
+    image: redis:alpine
+    container_name: e-business-redis-prod
+    restart: always
+    volumes:
+      - redis-prod-data:/data
+    networks:
+      - e-business-backend
+
+# Firewall dan Network Segregation / Pembatasan traffic access level
+networks:
+  e-business-frontend:
+    driver: bridge # Terbuka ke external web bridge
+  e-business-backend:
+    driver: bridge
+    internal: true # SECURE POLICY: Semua di network ini terputus total dari koneksi luar / host!
+
+# Volumes storage instance
+volumes:
+  db-prod-data:
+  redis-prod-data:
+  app-files: # Bridged volume untuk pemrosesan file static oleh Nginx

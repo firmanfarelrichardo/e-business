@@ -1,0 +1,80 @@
+version: '3.8'
+
+services:
+  # App Service: Mengelola proses PHP-FPM utama Laravel
+  app:
+    build:
+      context: ../../ # Konteks build berada di root direktori project 
+      dockerfile: deployment/local/Dockerfile
+    image: e-business-app-local
+    container_name: e-business-app
+    restart: unless-stopped
+    tty: true
+    # Mapping environment variable dari host .env 
+    env_file: ../../.env
+    # Volume Binding Penuh: Sinkronisasi realtime kode dari host ke container
+    volumes:
+      - ../../:/var/www
+    # Membuka port 5173 untuk mengakses Vite (HMR) dari browser host
+    ports:
+      - "5173:5173"
+    networks:
+      - e-business-network
+
+  # Web Service: Merouting HTTP Request mengunakan Nginx
+  web:
+    image: nginx:alpine
+    container_name: e-business-web
+    restart: unless-stopped
+    tty: true
+    # Expose port lokal (localhost:8000) diarahkan ke port 80 container Nginx
+    ports:
+      - "8000:80"
+    volumes:
+      # Akses ke direktori aplikasi untuk file assets statis
+      - ../../:/var/www
+      # Memasukkan custom config Nginx dari lokal
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf
+    networks:
+      - e-business-network
+    depends_on:
+      - app # Menjamin App berjalan dahulu sebelum web berjalan
+
+  # DB Service: Layanan Database PostgreSQL untuk Laravel 12
+  db:
+    image: postgres:15-alpine
+    container_name: e-business-db
+    restart: unless-stopped
+    # Expose port untuk dapat diakses oleh GUI DB client (DBeaver, pgAdmin dll)
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_DB: ${DB_DATABASE:-ebusiness_local}
+      POSTGRES_USER: ${DB_USERNAME:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-secret}
+    volumes:
+      - db-data:/var/lib/postgresql/data # Menghindari hilangnya data ketika container mati
+    networks:
+      - e-business-network
+
+  # Cache Service: Redis untuk Cache, Session, Queue
+  redis:
+    image: redis:alpine
+    container_name: e-business-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data # Penyimpanan data persisten untuk Redis
+    networks:
+      - e-business-network
+
+# Konfigurasi Jaringan Internal
+networks:
+  e-business-network:
+    driver: bridge
+
+# Deklarasi Named Volume untuk konsistensi data dev
+volumes:
+  db-data:
+  redis-data:
