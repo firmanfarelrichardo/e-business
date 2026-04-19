@@ -1,56 +1,105 @@
-# Menggunakan PHP 8.3 FPM image resmi (sangat direkomendasikan untuk stabilitas Laravel 12)
-FROM php:8.3-fpm
+# ===========================================
+# MER System - Laravel Dockerfile (Development)
+# PHP 8.3 FPM Alpine dengan UID/GID alignment
+# ===========================================
 
-# Definisikan folder utama aplikasi dalam container
-WORKDIR /var/www
+FROM php:8.3-fpm-alpine
 
-# Install dependensi sistem dasar untuk ekstensi PHP, image processing, dan utilitas umum
-RUN apt-get update && apt-get install -y \
-    build-essential \
-    libpng-dev \
-    libjpeg62-turbo-dev \
-    libfreetype6-dev \
-    locales \
-    zip \
-    jpegoptim optipng pngquant gifsicle \
-    vim \
-    unzip \
-    git \
-    curl \
-    libzip-dev \
-    libpq-dev \
-    libonig-dev
+# -------------------------------------------
+# 1. Install system dependencies & PHP extensions
+#    - shadow: diperlukan untuk usermod/groupmod
+#    - Build deps dipisah agar bisa dihapus setelah compile
+# -------------------------------------------
+RUN apk add --no-cache \
+        bash \
+        curl \
+        git \
+        libpng \
+        libjpeg-turbo \
+        freetype \
+        libzip \
+        libxml2 \
+        libpq \
+        icu-libs \
+        oniguruma \
+        zip \
+        unzip \
+        shadow \
+        nodejs \
+        npm \
+    && apk add --no-cache --virtual .build-deps \
+        $PHPIZE_DEPS \
+        libpng-dev \
+        libjpeg-turbo-dev \
+        freetype-dev \
+        libzip-dev \
+        libxml2-dev \
+        postgresql-dev \
+        icu-dev \
+        oniguruma-dev \
+    && docker-php-ext-configure gd --with-freetype --with-jpeg \
+    && docker-php-ext-install -j$(nproc) \
+        pdo \
+        pdo_pgsql \
+        pgsql \
+        mbstring \
+        exif \
+        pcntl \
+        bcmath \
+        gd \
+        zip \
+        intl \
+    && pecl install redis \
+    && docker-php-ext-enable redis \
+    && apk del .build-deps \
+    && rm -rf /tmp/pear /tmp/* /var/cache/apk/*
 
-# Bersihkan system cache instalasi (apt) untuk merampingkan ukuran image 
-RUN apt-get clean && rm -rf /var/lib/apt/lists/*
+# -------------------------------------------
+# 2. Install Composer
+# -------------------------------------------
+COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
 
-# Install Ekstensi PHP wajib bagi Laravel dan PosgreSQL driver (pdo_pgsql)
-RUN docker-php-ext-install pdo_pgsql mbstring zip exif pcntl
-RUN docker-php-ext-configure gd --with-freetype --with-jpeg
-RUN docker-php-ext-install gd
+# -------------------------------------------
+# 3. Align www-data UID/GID dengan host user
+#
+#    MENGAPA: PHP-FPM berjalan sebagai www-data.
+#    Pada bind-mount, file yang ditulis oleh www-data
+#    harus memiliki UID/GID yang sama dengan user host
+#    agar tidak terjadi konflik permission.
+#
+#    Default www-data di Alpine: UID=82, GID=82
+#    Host Linux user biasanya: UID=1000, GID=1000
+#
+#    Dengan usermod/groupmod, kita selaraskan keduanya
+#    sehingga file yang dibuat di container memiliki
+#    ownership yang benar di host filesystem.
+# -------------------------------------------
+ARG UID=1000
+ARG GID=1000
 
-# Install Redis extension (pecl) untuk optimalisasi caching laravel
-RUN pecl install redis && docker-php-ext-enable redis
+RUN groupmod -g ${GID} www-data \
+    && usermod -u ${UID} -g ${GID} www-data \
+    && usermod -s /bin/bash www-data
 
-# Install Node.js v20 (LTS) & NPM guna keperluan kompilasi Asset melalui Vite
-RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
-    && apt-get install -y nodejs
+# -------------------------------------------
+# 4. Prepare working directory
+# -------------------------------------------
+WORKDIR /var/www/html
 
-# Mengunduh dan install Composer secara mandiri dari Official Image buildnya
-COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
+RUN mkdir -p storage/logs \
+             storage/framework/cache \
+             storage/framework/sessions \
+             storage/framework/views \
+             bootstrap/cache \
+    && chown -R www-data:www-data /var/www/html
 
-# Membuat user group (www) tanpa root privilege agar lebih sinkron ownership-nya saat volume binding
-RUN groupadd -g 1000 www
-RUN useradd -u 1000 -ms /bin/bash -g www www
+# -------------------------------------------
+# 5. Entrypoint & Command
+# -------------------------------------------
+COPY deployment/local/docker-entrypoint.sh /usr/local/bin/
+RUN chmod +x /usr/local/bin/docker-entrypoint.sh
 
-# Seting permison file host copy - Opsional saat dev, best practice mencegah file conflict
-COPY --chown=www:www . /var/www
+EXPOSE 9000
 
-# Ganti menjadi user 'www' sebagai pemicu aplikasi untuk keamanan dan kebersihan permissions
-USER www
-
-# Memberi keterangan port yang terekspos (9000 untuk FPM proxy, 5173 konektor HMR Vite)
-EXPOSE 9000 5173
-
-# Perintah Default container saat hidup (Run fastcgi proxy server)
+ENTRYPOINT ["docker-entrypoint.sh"]
 CMD ["php-fpm"]
