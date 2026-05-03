@@ -9,9 +9,18 @@ use App\Http\Controllers\Api\ProductBrandController;
 use App\Http\Controllers\Api\BatchController;
 use App\Http\Controllers\Api\OrderController;
 use App\Http\Controllers\Api\StockReportController;
+use App\Http\Controllers\Front\CatalogController;
 
 Route::get('/', function () {
     return view('welcome');
+});
+
+Route::get('/katalog', [CatalogController::class, 'index']);
+Route::get('/jasa', [CatalogController::class, 'jasa']);
+Route::get('/keranjang', [CatalogController::class, 'keranjang']);
+
+Route::get('/not-configured', function () {
+    return view('errors.not-configured');
 });
 
 Route::apiResource('categories', ProductCategoryController::class);
