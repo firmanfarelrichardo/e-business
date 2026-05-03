@@ -19,7 +19,7 @@
                 <x-ui.glass-card variant="dark" class="h-[400px] lg:h-[600px] flex items-end relative border-none rounded-2xl group">
                     <div class="absolute inset-0 bg-gradient-to-tr from-brand-primary/40 to-brand-secondary/20 group-hover:scale-105 transition-transform duration-700 z-10"></div>
                     <!-- Banner image from reference -->
-                    <img src="https://images.unsplash.com/photo-1517055748053-294b62eb012a?q=80&w=800&auto=format&fit=crop" class="absolute inset-0 w-full h-full object-cover mix-blend-multiply opacity-80" alt="Alat Tulis Banner">
+                    <img src="https://png.pngtree.com/background/20211215/original/pngtree-blue-cartoon-stationery-background-picture-image_1461736.jpg" class="absolute inset-0 w-full h-full object-cover mix-blend-multiply opacity-80" alt="Alat Tulis Banner">
                     
                     <div class="relative z-20 p-8 w-full bg-gradient-to-t from-brand-dark via-brand-dark/80 to-transparent">
                         <div class="bg-white/20 backdrop-blur-md rounded-xl p-4 border border-white/30 text-center">
