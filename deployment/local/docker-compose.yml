@@ -42,16 +42,17 @@ services:
 
   # DB Service: Layanan Database PostgreSQL untuk Laravel 12
   db:
-    image: postgres:15-alpine
+    image: postgres:17-alpine
     container_name: e-business-db
     restart: unless-stopped
     # Expose port untuk dapat diakses oleh GUI DB client (DBeaver, pgAdmin dll)
+    # Menggunakan port 5433 di host untuk menghindari bentrok dengan Postgres 17 lokal Anda
     ports:
-      - "5432:5432"
+      - "5433:5432"
     environment:
       POSTGRES_DB: ${DB_DATABASE:-ebusiness_local}
       POSTGRES_USER: ${DB_USERNAME:-postgres}
-      POSTGRES_PASSWORD: ${DB_PASSWORD:-secret}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-postgres}
     volumes:
       - db-data:/var/lib/postgresql/data # Menghindari hilangnya data ketika container mati
     networks:
