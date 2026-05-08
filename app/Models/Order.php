@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+<<<<<<< HEAD
 use App\Traits\HasUuid;
 use Illuminate\Database\Eloquent\Model;
 
@@ -10,6 +11,15 @@ class Order extends Model
     use HasUuid;
 
     public $timestamps = false;
+=======
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Concerns\HasUuids;
+
+class Order extends Model
+{
+    use HasFactory, HasUuids;
+>>>>>>> 502819c98cd71e85ccf600a6c332d03e00f1c059
 
     protected $fillable = [
         'order_number',
@@ -20,6 +30,7 @@ class Order extends Model
         'note',
         'total_price',
         'paid_at',
+<<<<<<< HEAD
         'created_at',
         'completed_at',
     ];
@@ -33,6 +44,15 @@ class Order extends Model
             'completed_at' => 'datetime',
         ];
     }
+=======
+        'completed_at'
+    ];
+
+    protected $casts = [
+        'paid_at' => 'datetime',
+        'completed_at' => 'datetime',
+    ];
+>>>>>>> 502819c98cd71e85ccf600a6c332d03e00f1c059
 
     public function user()
     {
@@ -48,6 +68,7 @@ class Order extends Model
     {
         return $this->hasMany(OrderItem::class);
     }
+<<<<<<< HEAD
 
     public function transaction()
     {
@@ -68,3 +89,6 @@ class Order extends Model
     return $this->hasMany(OrderItem::class);
 }
 }
+=======
+}
+>>>>>>> 502819c98cd71e85ccf600a6c332d03e00f1c059
