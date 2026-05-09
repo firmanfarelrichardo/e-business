@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\ExpenseItem;
+use App\Models\ProductBrand;
 use App\Repositories\ExpenseRepository;
 use Illuminate\Support\Facades\DB;
 
@@ -10,7 +11,8 @@ class ExpenseService
 {
     public function __construct(
         protected ExpenseRepository $expenseRepository
-    ) {}
+    ) {
+    }
 
     public function getAllExpenses(array $filters = [])
     {
@@ -33,22 +35,29 @@ class ExpenseService
             // Buat expense
             $expense = $this->expenseRepository->create([
                 'total_amount' => $total,
-                'note'         => $data['note'] ?? null,
-                'batch_id'     => $data['batch_id'] ?? null,
-                'created_by'   => $createdBy,
-                'created_at'   => now(),
+                'note' => $data['note'] ?? null,
+                'batch_id' => $data['batch_id'] ?? null,
+                'created_by' => $createdBy,
+                'created_at' => now(),
             ]);
 
             // Buat item-item expense
+            $affectedProductBrands = [];
             foreach ($data['items'] as $item) {
                 ExpenseItem::create([
-                    'expense_id'       => $expense->id,
+                    'expense_id' => $expense->id,
                     'product_brand_id' => $item['product_brand_id'],
-                    'quantity'         => $item['quantity'],
-                    'purchase_price'   => $item['purchase_price'],
-                    'subtotal'         => $item['quantity'] * $item['purchase_price'],
-                    'created_at'       => now(),
+                    'quantity' => $item['quantity'],
+                    'purchase_price' => $item['purchase_price'],
+                    'subtotal' => $item['quantity'] * $item['purchase_price'],
+                    'created_at' => now(),
                 ]);
+                $affectedProductBrands[] = $item['product_brand_id'];
+            }
+
+            // Recalculate WAC (queue model) for each affected ProductBrand
+            foreach (array_unique($affectedProductBrands) as $pbId) {
+                ProductBrand::find($pbId)?->recalculateWAC();
             }
 
             return $expense->load('items.productBrand');
@@ -68,18 +77,18 @@ class ExpenseService
 
             $expense->update([
                 'total_amount' => $total,
-                'note'         => $data['note'] ?? null,
-                'batch_id'     => $data['batch_id'] ?? null,
+                'note' => $data['note'] ?? null,
+                'batch_id' => $data['batch_id'] ?? null,
             ]);
 
             foreach ($data['items'] as $item) {
                 ExpenseItem::create([
-                    'expense_id'       => $expense->id,
+                    'expense_id' => $expense->id,
                     'product_brand_id' => $item['product_brand_id'],
-                    'quantity'         => $item['quantity'],
-                    'purchase_price'   => $item['purchase_price'],
-                    'subtotal'         => $item['quantity'] * $item['purchase_price'],
-                    'created_at'       => now(),
+                    'quantity' => $item['quantity'],
+                    'purchase_price' => $item['purchase_price'],
+                    'subtotal' => $item['quantity'] * $item['purchase_price'],
+                    'created_at' => now(),
                 ]);
             }
 

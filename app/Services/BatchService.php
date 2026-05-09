@@ -44,6 +44,12 @@ class BatchService
             $data['created_at'] = Carbon::now();
 
             $batch = $this->batchRepository->create($data);
+
+            // Trigger WAC recalculation on the related ProductBrand
+            if (!empty($data['product_brand_id'])) {
+                \App\Models\ProductBrand::find($data['product_brand_id'])?->recalculateWAC();
+            }
+
             DB::commit();
             return $batch;
         } catch (Exception $e) {

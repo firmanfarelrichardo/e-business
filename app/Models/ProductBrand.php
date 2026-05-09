@@ -41,4 +41,26 @@ class ProductBrand extends Model
     {
         return $this->batches()->where('is_active', true)->sum('current_stock');
     }
+
+    /**
+     * Recalculate selling_price using Weighted Average Cost (WAC) queue model.
+     * Only batches with current_stock > 0 are included (depleted batches excluded).
+     */
+    public function recalculateWAC(): void
+    {
+        $activeBatches = $this->batches()
+            ->where('current_stock', '>', 0)
+            ->get(['purchase_price', 'current_stock']);
+
+        if ($activeBatches->isEmpty()) {
+            return; // No stock remaining — keep current price
+        }
+
+        $totalValue = $activeBatches->sum(fn($b) => $b->purchase_price * $b->current_stock);
+        $totalQuantity = $activeBatches->sum('current_stock');
+
+        $wac = intdiv((int) $totalValue, (int) $totalQuantity);
+
+        $this->update(['selling_price' => $wac]);
+    }
 }
