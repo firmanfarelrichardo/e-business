@@ -155,6 +155,8 @@ Route::prefix('dashboard')->group(function () {
     // Batch Stock Management (delegated to Web\BatchController)
     Route::get('/batches', [WebBatchController::class, 'index'])->name('dashboard.batches');
     Route::post('/batches', [WebBatchController::class, 'store'])->name('dashboard.batches.store');
+    Route::get('/batches/{id}/edit', [WebBatchController::class, 'edit'])->name('dashboard.batches.edit');
+    Route::put('/batches/{id}', [WebBatchController::class, 'update'])->name('dashboard.batches.update');
     Route::post('/batches/{id}/toggle', [WebBatchController::class, 'toggleActive'])->name('dashboard.batches.toggle');
     Route::delete('/batches/{id}', [WebBatchController::class, 'destroy'])->name('dashboard.batches.destroy');
 

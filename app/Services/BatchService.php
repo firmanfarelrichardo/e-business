@@ -164,6 +164,19 @@ class BatchService
                 $batch->product_brand_id
             );
 
+            // Constraint Anti-Minus Logic:
+            // Calculate how many items from this batch have already been sold.
+            $soldQty = $batch->initial_stock - $batch->current_stock;
+
+            if (isset($data['initial_stock'])) {
+                if ($data['initial_stock'] < $soldQty) {
+                    throw new Exception("Stok awal tidak bisa diubah lebih rendah dari jumlah barang yang sudah terjual dari batch ini ({$soldQty} unit).");
+                }
+                
+                // Recalculate the new current stock based on the adjusted initial stock
+                $data['current_stock'] = $data['initial_stock'] - $soldQty;
+            }
+
             $batch = $this->batchRepository->update($batch, $data);
 
             // Recalculate totals after the stock values have changed

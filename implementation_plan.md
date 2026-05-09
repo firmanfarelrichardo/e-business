@@ -1,50 +1,55 @@
-# Rencana Implementasi: Order Fulfillment & Cetak Invoice
+# Rencana Implementasi: Edit Batch & Validasi Anti-Minus
 
-Modul ini menyelesaikan siklus pesanan (Order Management) untuk staf kasir/admin.
+Fitur ini akan memungkinkan admin untuk mengoreksi kesalahan *input* pada Batch (Harga Beli & Stok Awal) dengan pengamanan ketat agar tidak terjadi *negative stock* (stok minus) pada sistem.
 
 ## User Review Required
 
-> [!IMPORTANT]
-> **Penyesuaian Penamaan Status (Mapping)**
-> Anda meminta status: `pending`, `process`, `finish`, `canceled`.
-> Berdasarkan skema database dan Model `Order` yang sudah ada, nilai ENUM status adalah: `pending`, `processing`, `completed`, `cancelled`.
-> **Solusi**: Saya akan tetap menggunakan ENUM asli bawaan database (`processing` untuk process, `completed` untuk finish, `cancelled` untuk canceled) agar tidak perlu merusak struktur DB yang sudah berjalan, namun *label di UI* akan ditampilkan sebagai "Diproses", "Selesai", dan "Dibatalkan". Apakah Anda setuju dengan pendekatan ini?
+> [!WARNING]
+> **Penyelarasan Nama Kolom (Field)**
+> Di dalam instruksi, Anda menyebutkan field `stock_added`. Berdasarkan skema tabel `batches` yang ada, nama kolom yang menyimpan stok awal masuk adalah **`initial_stock`**. Saya akan menggunakan `initial_stock` di dalam kode untuk memastikan kompatibilitas dengan database tanpa perlu migrasi ulang. Apakah Anda setuju?
 
 ## Proposed Changes
 
-### 1. Order Fulfillment Logic (Service & Repository)
+### 1. Logika Pembaruan (Service Layer)
 
-#### [MODIFY] app/Services/OrderService.php
-- **Penyempurnaan `updateOrderStatus()` dan `deductStock()`**: Saya akan menyuntikkan fungsi **`lockForUpdate()`** ke dalam iterasi item sebelum pemotongan stok.
-- **Mekanisme (CRITICAL HOOK)**:
-  1. Saat status diubah ke `completed` (finish), sistem membuka transaksi `DB::transaction()`.
-  2. Melakukan *pessimistic locking* pada tabel `product_brands` (atau `batches`) melalui `BatchRepository` terkait untuk mencegah *race condition* kasir lain yang menekan tombol bersamaan.
-  3. Memotong `current_stock` pada *Batch* secara FIFO.
-  4. Commit transaksi. Jika gagal, rollback total.
+#### [MODIFY] app/Services/BatchService.php
+Memperbarui metode `updateBatch($id, array $data)` untuk memasukkan *Constraint Anti-Minus*:
+- Mengunci data *ProductBrand* dengan `lockForUpdate()`.
+- **Rumus:** `$soldQty = $batch->initial_stock - $batch->current_stock;`
+- **Validasi:** Jika input `$data['initial_stock'] < $soldQty`, sistem akan melempar `Exception` ("Stok awal tidak bisa diubah lebih rendah dari jumlah barang yang sudah terjual").
+- **Kalkulasi Ulang:** Jika lolos, `$batch->current_stock` akan disetel menjadi `$data['initial_stock'] - $soldQty`. `purchase_price` juga diperbarui.
+- *Total Stock* dan *WAC* otomatis dihitung ulang melalui pemanggilan fungsi yang sudah ada di bawahnya.
 
-### 2. Dashboard Manajemen Antrean (Controller & UI)
+### 2. Validasi Request
 
-#### [MODIFY] app/Http/Controllers/Web/OrderController.php
-- Menambahkan logika di metode `index()` untuk menarik semua pesanan hari ini.
-- Membawa data ke Blade dengan pemisahan status (Pending, Processing, Completed) agar bisa di-render dalam struktur Tab UI.
+#### [NEW] app/Http/Requests/UpdateBatchRequest.php
+Membuat form request untuk validasi input:
+- `initial_stock`: required, integer, minimal 1.
+- `purchase_price`: required, numeric, minimal 0.
 
-#### [NEW] resources/views/dashboard/queues/index.blade.php
-- **Antarmuka Real-time Kasir**: Menggunakan desain *Glassmorphism*.
-- Membagi pesanan ke dalam 3 kolom/tab:
-  - **Menunggu (Pending)**: Tombol aksi "Proses Pesanan".
-  - **Diproses (Processing)**: Tombol aksi "Selesaikan Pesanan".
-  - **Selesai (Completed)**: Tombol aksi "Cetak Struk/Invoice".
+### 3. Kontroler & Rute
 
-### 3. Cetak Invoice / Struk (Thermal Printer)
+#### [MODIFY] app/Http/Controllers/Web/BatchController.php
+- Menambahkan metode `edit(string $id)` untuk mengembalikan *view* form edit.
+- Menambahkan metode `update(UpdateBatchRequest $request, string $id)` untuk memproses pembaruan melalui `BatchService`.
 
-#### [NEW] resources/views/invoice/show.blade.php
-- **Format Cetak Khusus**: Tidak ada sidebar, navigasi, atau elemen *dashboard* lainnya.
-- **CSS Media Print (`@media print`)**: Mengatur lebar struk agar responsif terhadap *Thermal Printer* (58mm/80mm) atau A4 (jika dibuka di komputer standar).
-- **Konten**: Menampilkan detail E-Business, Nomor Antrean pesanan (`queue_number`), Daftar Item (Produk/Jasa), Qty, Harga, Total, dan ucapan terima kasih.
+#### [MODIFY] routes/web.php
+Menambahkan 2 rute baru di bawah grup `dashboard/batches`:
+- `GET /batches/{id}/edit` -> `edit`
+- `PUT /batches/{id}` -> `update`
+
+### 4. Antarmuka UI (Frontend)
+
+#### [NEW] resources/views/dashboard/batches/edit.blade.php
+Membuat halaman Edit (*Glassmorphism* style):
+- Form khusus untuk mengubah `initial_stock` dan `purchase_price`.
+- **CRITICAL UI:** Menampilkan kotak informasi _Readonly_ berisi:
+  - Jumlah Stok Awal (Lama)
+  - Jumlah Terjual (`$soldQty`)
+  - Sisa Stok Saat Ini
+- Form akan memberikan peringatan visual jika user mengetik angka di bawah `$soldQty`.
 
 ## Verification Plan
 
-1. **Uji Coba Pengubahan Status**:
-   - Memastikan tombol "Proses" mengubah pesanan jadi `processing` tanpa memotong stok.
-   - Memastikan tombol "Selesaikan" mengubah pesanan jadi `completed` dan **memotong stok** di `batches` secara FIFO dengan aman.
-2. **Uji Coba Tampilan Print**: Mengakses URL `/invoice/{id}` dan mengecek apakah formatnya murni kertas struk tanpa gangguan UI lain.
+1. **Uji Validasi:** Memasukkan nilai `initial_stock` yang lebih kecil dari barang yang sudah terjual -> Harus gagal dengan pesan *error*.
+2. **Uji Sukses:** Memasukkan nilai yang valid -> Harus berhasil menyimpan, dan nilai WAC / *Current Stock* pada Product Brand harus otomatis menyesuaikan.

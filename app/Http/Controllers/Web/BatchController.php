@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Web;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\StoreBatchRequest;
+use App\Http\Requests\UpdateBatchRequest;
 use App\Services\BatchService;
 use App\Models\ProductBrand;
 
@@ -113,6 +114,42 @@ class BatchController extends Controller
         } catch (\Exception $e) {
             return redirect()->back()
                 ->with('error', 'Gagal mengubah status: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Show the form for editing the specified batch.
+     *
+     * @param  string $id
+     * @return \Illuminate\View\View
+     */
+    public function edit(string $id)
+    {
+        $batch = $this->batchService->getBatchById($id);
+        $soldQty = $batch->initial_stock - $batch->current_stock;
+
+        return view('dashboard.batches.edit', compact('batch', 'soldQty'));
+    }
+
+    /**
+     * Update the specified batch in storage.
+     *
+     * @param  \App\Http\Requests\UpdateBatchRequest $request
+     * @param  string $id
+     * @return \Illuminate\Http\RedirectResponse
+     */
+    public function update(UpdateBatchRequest $request, string $id)
+    {
+        try {
+            $data = $request->validated();
+            $this->batchService->updateBatch($id, $data);
+
+            return redirect()->route('dashboard.batches')
+                ->with('success', 'Batch berhasil diperbarui. Stok & WAC telah disinkronisasi.');
+        } catch (\Exception $e) {
+            return redirect()->back()
+                ->withInput()
+                ->with('error', 'Gagal memperbarui batch: ' . $e->getMessage());
         }
     }
 
