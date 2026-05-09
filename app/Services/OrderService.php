@@ -306,6 +306,9 @@ class OrderService
             if ($item->product_brand_id) {
                 $quantityToDeduct = $item->quantity;
 
+                // CRITICAL HOOK: Pessimistic locking to prevent race condition during checkout
+                $this->batchRepository->lockProductBrandForUpdate($item->product_brand_id);
+
                 // Retrieve batches ordered by creation date (FIFO)
                 $batches = $this->batchRepository->getActiveBatchesWithStock($item->product_brand_id);
 

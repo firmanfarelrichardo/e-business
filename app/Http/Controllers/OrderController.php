@@ -42,6 +42,13 @@ class OrderController extends Controller
         ]);
     }
 
+    protected \App\Services\OrderService $orderService;
+
+    public function __construct(\App\Services\OrderService $orderService)
+    {
+        $this->orderService = $orderService;
+    }
+
     /**
      * Display a specific order invoice with its line items.
      *
@@ -50,7 +57,7 @@ class OrderController extends Controller
      */
     public function invoice($id)
     {
-        $order = Order::with('items')->findOrFail($id);
+        $order = $this->orderService->getOrderById($id);
         return view('invoice.show', compact('order'));
     }
 }
