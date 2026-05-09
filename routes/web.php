@@ -14,6 +14,7 @@ use App\Http\Controllers\Api\StockReportController;
 use App\Http\Controllers\Api\UserController;
 use App\Http\Controllers\Api\ExpenseController;
 use App\Http\Controllers\Api\DashboardController;
+use App\Http\Controllers\Front\CatalogController;
 
 // ================= FRONTEND =================
 use App\Http\Controllers\OrderController;
@@ -26,6 +27,15 @@ Route::get('/', function () {
 // ── Auth Pages (Blade) ────────────────────────────────────────────
 Route::get('/login', fn() => view('auth.auth', ['initialMode' => 'login']))->name('login');
 Route::get('/register', fn() => view('auth.auth', ['initialMode' => 'register']))->name('register');
+
+// ── Catalog UI Pages ──────────────────────────────────────────────
+Route::get('/katalog', [CatalogController::class, 'index']);
+Route::get('/jasa', [CatalogController::class, 'jasa']);
+Route::get('/keranjang', [CatalogController::class, 'keranjang']);
+
+Route::get('/not-configured', function () {
+    return view('errors.not-configured');
+});
 
 // ================= API RESOURCE =================
 Route::apiResource('categories', ProductCategoryController::class);

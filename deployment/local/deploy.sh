@@ -115,6 +115,7 @@ show_menu() {
     echo -e "  ${CYAN}--- Cleanup (Project-Scoped) ---${NC}"
     echo -e "  ${RED}50)${NC} Remove Stopped Containers & Dangling Images"
     echo -e "  ${RED}51)${NC} Remove ALL Project Resources (Termasuk Volume DB)"
+    echo -e "  ${RED}52)${NC} Fix Container Name Conflicts (Force rm by name)"
     echo ""
     echo -e "  ${CYAN}--- WSL Network ---${NC}"
     echo -e "  ${YELLOW}60)${NC} Show Detected Gateway IP"
@@ -480,7 +481,21 @@ app_init() {
         echo -e "  ${GREEN}✓${NC} APP_KEY generated"
     fi
 
-    # 3. migrate
+    # 3. Wait for DB and migrate
+    echo -e "  ${YELLOW}➤${NC} waiting for database to be ready..."
+    local db_waited=0
+    while ! docker exec "$DB_CONTAINER" pg_isready -q 2>/dev/null; do
+        sleep 2
+        db_waited=$((db_waited + 2))
+        if [ "$db_waited" -ge 60 ]; then
+            echo -e "  ${RED}✗${NC} Database failed to start within 60s"
+            return 1
+        fi
+        echo -n "."
+    done
+    echo ""
+    echo -e "  ${GREEN}✓${NC} database is ready"
+
     echo -e "  ${YELLOW}➤${NC} php artisan migrate ..."
     if docker exec "$APP_CONTAINER" php artisan migrate --no-interaction --force; then
         echo -e "  ${GREEN}✓${NC} migrate selesai"
@@ -666,6 +681,40 @@ check_env() {
     return 0
 }
 
+fix_container_conflicts() {
+    print_header "Fixing Container Name Conflicts"
+    echo -e "${YELLOW}Mencari container yang bentrok (bernama sama tetapi di luar project ini)...${NC}"
+    
+    local resolved=0
+    for container in $APP_CONTAINER $WEB_CONTAINER $DB_CONTAINER $REDIS_CONTAINER; do
+        if docker ps -a --format '{{.Names}}' | grep -q "^${container}$"; then
+            echo -e "  ${YELLOW}→${NC} Menghapus container yang bentrok: ${RED}$container${NC}"
+            docker rm -f "$container" >/dev/null 2>&1
+            resolved=$((resolved + 1))
+        fi
+    done
+    
+    if [ "$resolved" -gt 0 ]; then
+        echo -e "  ${GREEN}✓ $resolved container berhasil dibersihkan.${NC}"
+    else
+        echo -e "  ${GREEN}✓ Tidak ada container yang bentrok.${NC}"
+    fi
+}
+
+start_compose_up() {
+    local args="$*"
+    if ! eval "$DC up -d $args"; then
+        echo -e "${RED}✗ Gagal menjalankan docker compose up karena error (mungkin konflik).${NC}"
+        fix_container_conflicts
+        echo -e "${YELLOW}Mencoba start ulang...${NC}"
+        if ! eval "$DC up -d $args"; then
+            echo -e "${RED}✗ Tetap gagal. Silakan periksa error secara manual.${NC}"
+            return 1
+        fi
+    fi
+    return 0
+}
+
 # Main loop
 while true; do
     show_menu
@@ -676,7 +725,7 @@ while true; do
             check_env || continue
             echo ""
             echo -e "${GREEN}Starting E-Business Development Environment...${NC}"
-            $DC up -d
+            start_compose_up || continue
 
             APP_PORT=8000
             VITE_PORT=5173
@@ -709,7 +758,7 @@ while true; do
             read -p "Are you sure? (y/n): " confirm
             if [ "$confirm" = "y" ] || [ "$confirm" = "Y" ]; then
                 $DC down -v --rmi local
-                $DC up -d
+                start_compose_up || continue
                 app_init
                 echo -e "${GREEN}✓ Clean rebuild complete!${NC}"
             fi
@@ -719,7 +768,7 @@ while true; do
             check_env || continue
             echo ""
             echo -e "${GREEN}Quick Rebuild (preserving data)...${NC}"
-            $DC up -d --build
+            start_compose_up --build || continue
             app_init
             echo -e "${GREEN}✓ Quick rebuild complete!${NC}"
             read -p "Press Enter to continue..."
@@ -737,7 +786,7 @@ while true; do
                 echo -e "${YELLOW}Building images without cache...${NC}"
                 $DC build --no-cache
                 echo -e "${YELLOW}Starting services...${NC}"
-                $DC up -d
+                start_compose_up || continue
                 app_init
                 echo ""
                 echo -e "${GREEN}✓ Force rebuild completed successfully!${NC}"
@@ -941,6 +990,11 @@ while true; do
                 $DC down -v --rmi local 2>/dev/null
                 echo -e "${GREEN}✓ All E-Business resources removed!${NC}"
             fi
+            read -p "Press Enter to continue..."
+            ;;
+        52)
+            echo ""
+            fix_container_conflicts
             read -p "Press Enter to continue..."
             ;;
         60)

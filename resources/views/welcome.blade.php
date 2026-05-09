@@ -94,9 +94,9 @@
             
             <!-- Desktop Navigation -->
             <div class="hidden md:flex space-x-8 items-center z-10">
-                <a href="#katalog" class="text-white/90 hover:text-white text-sm font-medium transition duration-200">Katalog ATK</a>
-                <a href="#jasa-cetak" class="text-white/90 hover:text-white text-sm font-medium transition duration-200">Jasa Cetak</a>
-                <a href="#lacak" class="text-white/90 hover:text-white text-sm font-medium transition duration-200">Lacak Pesanan</a>
+                <a href="{{ url('/katalog') }}" class="text-white/90 hover:text-white text-sm font-medium transition duration-200">Katalog ATK</a>
+                <a href="{{ url('/jasa') }}" class="text-white/90 hover:text-white text-sm font-medium transition duration-200">Jasa Cetak</a>
+                <a href="{{ url('/not-configured') }}" class="text-white/90 hover:text-white text-sm font-medium transition duration-200">Lacak Pesanan</a>
             </div>
 
             <!-- Auth Buttons -->
@@ -143,10 +143,10 @@
                         Platform e-Business terintegrasi untuk penuhi kebutuhan operasional kantor Anda. Kualitas premium, diproses dengan cepat & praktis.
                     </p>
                     <div class="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
-                        <a href="#katalog" class="bg-gradient-to-r from-brand-primary to-brand-secondary text-brand-dark px-8 py-3.5 rounded-full font-bold text-lg shadow-lg hover:shadow-brand-primary/50 transform hover:-translate-y-1 transition duration-300 w-full sm:w-auto text-center flex items-center justify-center gap-2">
+                        <a href="{{ url('/katalog') }}" class="bg-gradient-to-r from-brand-primary to-brand-secondary text-brand-dark px-8 py-3.5 rounded-full font-bold text-lg shadow-lg hover:shadow-brand-primary/50 transform hover:-translate-y-1 transition duration-300 w-full sm:w-auto text-center flex items-center justify-center gap-2">
                             Mulai Belanja
                         </a>
-                        <a href="#jasa-cetak" class="glass-panel text-white hover:bg-white/20 px-8 py-3.5 rounded-full font-semibold text-lg transition duration-300 w-full sm:w-auto text-center">
+                        <a href="{{ url('/jasa') }}" class="glass-panel text-white hover:bg-white/20 px-8 py-3.5 rounded-full font-semibold text-lg transition duration-300 w-full sm:w-auto text-center">
                             Pesan Jasa Cetak
                         </a>
                     </div>
@@ -254,7 +254,7 @@
                             
                             <div class="space-y-6">
                                 <!-- Service item 1 -->
-                                <a href="#katalog" class="group block p-6 bg-white/50 hover:bg-white/80 rounded-2xl border border-white transition-all shadow-sm hover:shadow-md">
+                                <a href="{{ url('/katalog') }}" class="group block p-6 bg-white/50 hover:bg-white/80 rounded-2xl border border-white transition-all shadow-sm hover:shadow-md">
                                     <div class="flex items-center gap-5">
                                         <div class="w-14 h-14 rounded-full bg-brand-primary/20 flex items-center justify-center group-hover:bg-brand-primary group-hover:text-white text-brand-dark transition-colors">
                                             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path></svg>
@@ -267,7 +267,7 @@
                                 </a>
                                 
                                 <!-- Service item 2 -->
-                                <a href="#jasa-cetak" class="group block p-6 bg-white/50 hover:bg-white/80 rounded-2xl border border-white transition-all shadow-sm hover:shadow-md">
+                                <a href="{{ url('/jasa') }}" class="group block p-6 bg-white/50 hover:bg-white/80 rounded-2xl border border-white transition-all shadow-sm hover:shadow-md">
                                     <div class="flex items-center gap-5">
                                         <div class="w-14 h-14 rounded-full bg-brand-secondary/30 flex items-center justify-center group-hover:bg-brand-dark group-hover:text-white text-brand-dark transition-colors">
                                             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path></svg>
@@ -323,10 +323,10 @@
                 <div>
                     <h4 class="text-white font-bold mb-6 uppercase tracking-widest text-xs">Eksplorasi</h4>
                     <ul class="space-y-3 font-light text-sm">
-                        <li><a href="#katalog" class="text-white/60 hover:text-white transition">Katalog Belanja ATK</a></li>
-                        <li><a href="#jasa-cetak" class="text-white/60 hover:text-white transition">Layanan Percetakan</a></li>
-                        <li><a href="#" class="text-white/60 hover:text-white transition">Promo Spesial</a></li>
-                        <li><a href="#" class="text-white/60 hover:text-white transition">Kemitraan B2B</a></li>
+                        <li><a href="{{ url('/katalog') }}" class="text-white/60 hover:text-white transition">Katalog Belanja ATK</a></li>
+                        <li><a href="{{ url('/jasa') }}" class="text-white/60 hover:text-white transition">Layanan Percetakan</a></li>
+                        <li><a href="{{ url('/not-configured') }}" class="text-white/60 hover:text-white transition">Promo Spesial</a></li>
+                        <li><a href="{{ url('/not-configured') }}" class="text-white/60 hover:text-white transition">Kemitraan B2B</a></li>
                     </ul>
                 </div>
                 
@@ -334,10 +334,10 @@
                 <div>
                     <h4 class="text-white font-bold mb-6 uppercase tracking-widest text-xs">Bantuan</h4>
                     <ul class="space-y-3 font-light text-sm">
-                        <li><a href="#lacak" class="text-white/60 hover:text-white transition">Lacak Pengiriman</a></li>
-                        <li><a href="#" class="text-white/60 hover:text-white transition">Petunjuk Pembayaran</a></li>
-                        <li><a href="#" class="text-white/60 hover:text-white transition">Syarat & Ketentuan</a></li>
-                        <li><a href="#" class="text-white/60 hover:text-white transition">Privasi & Keamanan</a></li>
+                        <li><a href="{{ url('/not-configured') }}" class="text-white/60 hover:text-white transition">Lacak Pengiriman</a></li>
+                        <li><a href="{{ url('/not-configured') }}" class="text-white/60 hover:text-white transition">Petunjuk Pembayaran</a></li>
+                        <li><a href="{{ url('/not-configured') }}" class="text-white/60 hover:text-white transition">Syarat & Ketentuan</a></li>
+                        <li><a href="{{ url('/not-configured') }}" class="text-white/60 hover:text-white transition">Privasi & Keamanan</a></li>
                     </ul>
                 </div>
                 
@@ -366,7 +366,7 @@
                     &copy; {{ date('Y') }} Sinergi e-Business. Hak Cipta Dilindungi.
                 </p>
                 <div class="flex space-x-4">
-                    <a href="#" class="w-8 h-8 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-white/50 hover:text-white hover:bg-white/20 transition">
+                    <a href="{{ url('/not-configured') }}" class="w-8 h-8 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-white/50 hover:text-white hover:bg-white/20 transition">
                         <svg class="h-3 w-3" fill="currentColor" viewBox="0 0 24 24"><path fill-rule="evenodd" d="M22 12c0-5.523-4.477-10-10-10S2 6.477 2 12c0 4.991 3.657 9.128 8.438 9.878v-6.987h-2.54V12h2.54V9.797c0-2.506 1.492-3.89 3.777-3.89 1.094 0 2.238.195 2.238.195v2.46h-1.26c-1.243 0-1.63.771-1.63 1.562V12h2.773l-.443 2.89h-2.33v6.988C18.343 21.128 22 16.991 22 12z" clip-rule="evenodd" /></svg>
                     </a>
                 </div>
