@@ -10,9 +10,16 @@ use App\Http\Controllers\Api\BatchController;
 use App\Http\Controllers\Api\OrderController;
 use App\Http\Controllers\Api\StockReportController;
 
+// ── Landing Page ─────────────────────────────────────────────────
 Route::get('/', function () {
     return view('welcome');
 });
+
+// ── Auth Pages (Blade) ────────────────────────────────────────────
+Route::get('/login', fn() => view('auth.auth', ['initialMode' => 'login']))->name('login');
+Route::get('/register', fn() => view('auth.auth', ['initialMode' => 'register']))->name('register');
+
+
 
 Route::apiResource('categories', ProductCategoryController::class);
 Route::apiResource('brands', BrandController::class);
