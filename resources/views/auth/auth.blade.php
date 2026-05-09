@@ -109,22 +109,34 @@
             left: 54%;
         }
 
-        /* Corporate background image */
+        /* Corporate background */
         .brand-img {
             position: absolute;
             inset: 0;
-            background-image: url('/images/auth-bg.jpg');
-            background-size: cover;
-            background-position: center;
-            opacity: 0.28;
-            /* low opacity so color dominates */
+            background: linear-gradient(135deg, #7B9B6F, #5A6852, #96A78D, #B6CEB4);
+            background-size: 400% 400%;
+            animation: gradientAnim 15s ease infinite;
+            opacity: 0.9;
             transition: transform var(--dur) var(--ease);
             transform: scale(1.04);
         }
 
+        @keyframes gradientAnim {
+            0% {
+                background-position: 0% 50%;
+            }
+
+            50% {
+                background-position: 100% 50%;
+            }
+
+            100% {
+                background-position: 0% 50%;
+            }
+        }
+
         .auth-card.show-register .brand-panel .brand-img {
             transform: scale(1);
-            /* slight zoom-out on switch */
         }
 
         /* Color overlay on top of image */
@@ -1091,7 +1103,7 @@
         ══════════════════════════════════════════════ */
 
         const CSRF = document.querySelector('meta[name="csrf-token"]')?.content;
-        const API = '/api';
+        const API = '/web-auth';
 
         let currentMode = '{{ isset($initialMode) ? $initialMode : "login" }}';
         const card = document.getElementById('authCard');
@@ -1233,7 +1245,7 @@
             const btn = document.getElementById('loginBtn');
             setLoading(btn, true); startProgress();
             try {
-                const { ok, data } = await apiPost('/auth/login', { username, password });
+                const { ok, data } = await apiPost('/login', { username, password });
                 if (ok) {
                     showAlert('loginAlert', data.message || 'Login berhasil!', 'success');
                     finishProgress();
@@ -1284,7 +1296,7 @@
             const btn = document.getElementById('registerBtn');
             setLoading(btn, true); startProgress();
             try {
-                const { ok, data } = await apiPost('/auth/register', {
+                const { ok, data } = await apiPost('/register', {
                     name, username, email, password, password_confirmation,
                     address: address || null,
                 });
