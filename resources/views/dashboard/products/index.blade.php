@@ -1,0 +1,291 @@
+@extends('components.layouts.dashboard')
+
+@section('content')
+
+    @push('scripts')
+        <script type="module">
+            import { animate, stagger } from "https://esm.sh/motion";
+            animate(".motion-title", { y: [20, 0], opacity: [0, 1] }, { duration: 0.5, easing: "ease-out" });
+            animate(".motion-table-row", { y: [20, 0], opacity: [0, 1] }, { delay: stagger(0.08), duration: 0.5, easing: "ease-out" });
+        </script>
+    @endpush
+
+    <div class="mb-8">
+        <h1 class="text-2xl font-bold text-gray-800 tracking-tight motion-title">Manajemen Produk & Inventori</h1>
+        <p class="text-sm text-gray-500 motion-title mt-1">Kelola data seluruh produk ATK, stok, dan harga jual</p>
+    </div>
+
+    @if(session('success'))
+        <div class="mb-4 bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-xl text-sm motion-title">
+            {{ session('success') }}
+        </div>
+    @endif
+
+    @if($errors->any())
+        <div class="mb-4 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl text-sm motion-title">
+            <ul class="list-disc list-inside space-y-1">
+                @foreach($errors->all() as $error)<li>{{ $error }}</li>@endforeach
+            </ul>
+        </div>
+    @endif
+
+    <!-- Control Panel -->
+    <div
+        class="motion-title bg-white rounded-2xl p-6 shadow-sm border border-gray-100 flex flex-col md:flex-row justify-between items-center gap-4 mb-6">
+        <div class="relative w-full md:w-80">
+            <span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"
+                        d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+            </span>
+            <input type="text" placeholder="Cari nama produk..."
+                class="w-full bg-gray-50 border border-gray-200 rounded-xl py-2.5 pl-10 pr-4 text-sm focus:outline-none focus:ring-2 focus:ring-[#7B9B6F] transition"
+                oninput="filterProducts(this.value)">
+        </div>
+
+        <button onclick="openProductCreateModal()"
+            class="w-full md:w-auto bg-[#7B9B6F] hover:bg-[#5A6852] text-white px-5 py-2.5 rounded-xl text-sm font-medium transition shadow-sm flex items-center justify-center gap-2">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+            </svg>
+            Tambah Produk
+        </button>
+    </div>
+
+    <!-- Products Table -->
+    <div class="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden motion-title">
+        <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse">
+                <thead>
+                    <tr class="bg-gray-50 border-b border-gray-100">
+                        <th class="py-4 px-6 text-xs font-semibold text-gray-500 uppercase tracking-wider">Info Produk / ID
+                        </th>
+                        <th class="py-4 px-6 text-xs font-semibold text-gray-500 uppercase tracking-wider w-1/6">Kategori</th>
+                        <th class="py-4 px-6 text-xs font-semibold text-gray-500 uppercase tracking-wider w-1/3">Varian & Harga Jual</th>
+                        <th class="py-4 px-6 text-xs font-semibold text-gray-500 uppercase tracking-wider text-right">Aksi
+                        </th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-50">
+                    @forelse($products as $product)
+                        <tr class="hover:bg-gray-50/50 transition motion-table-row product-row"
+                            data-name="{{ strtolower($product->name) }}">
+                            <td class="py-4 px-6">
+                                <div class="flex items-center gap-4">
+                                    @if(!empty($product->attachments) && is_array($product->attachments) && count($product->attachments) > 0)
+                                        <img src="{{ Storage::url($product->attachments[0]) }}" alt="{{ $product->name }}" class="w-12 h-12 rounded-xl object-cover border border-gray-200 shrink-0">
+                                    @else
+                                        <div
+                                            class="w-12 h-12 rounded-xl bg-gray-100 border border-gray-200 flex items-center justify-center shrink-0">
+                                            <svg class="w-6 h-6 text-gray-400" fill="none" stroke="currentColor"
+                                                viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"
+                                                    d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                                            </svg>
+                                        </div>
+                                    @endif
+                                    <div>
+                                        <div class="font-medium text-gray-800 text-sm">{{ $product->name }}</div>
+                                        <div class="text-xs text-gray-400 mt-0.5 font-mono">
+                                            PRD-{{ strtoupper(substr($product->id, 0, 8)) }}</div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td class="py-4 px-6">
+                                <span
+                                    class="inline-flex items-center px-2.5 py-1 rounded-md text-xs font-medium bg-emerald-100 text-emerald-800 border border-emerald-200">
+                                    {{ $product->category->name ?? 'Tanpa Kategori' }}
+                                </span>
+                            </td>
+                            <td class="py-4 px-6">
+                                <div class="space-y-3">
+                                    @forelse($product->brands as $pb)
+                                        @php
+                                            $activeBatches = $pb->batches->where('current_stock', '>', 0);
+                                            $totalStock = $activeBatches->sum('current_stock');
+                                            $wacValue = $totalStock > 0 ? $activeBatches->sum(function($b) { return $b->purchase_price * $b->current_stock; }) / $totalStock : 0;
+                                        @endphp
+                                        <div class="flex items-center justify-between gap-4 p-2 bg-gray-50 rounded-lg border border-gray-100 shadow-sm">
+                                            <div class="text-xs">
+                                                <span class="font-semibold text-gray-700">{{ optional($pb->brand)->name ?? 'Unknown' }}</span>
+                                                <div class="text-gray-500 mt-0.5 text-[10px]">Stok: <span class="font-medium text-gray-800">{{ $totalStock }}</span> | <span class="text-amber-600 font-medium">Modal: Rp{{ number_format($wacValue, 0, ',', '.') }}</span></div>
+                                            </div>
+                                            <form action="{{ route('dashboard.productbrand.price', $pb->id) }}" method="POST" class="flex items-center gap-1 shrink-0">
+                                                @csrf @method('PUT')
+                                                <input type="number" name="selling_price" value="{{ round($pb->selling_price) }}" required min="0" class="w-24 px-2 py-1 text-xs border border-gray-200 rounded focus:border-[#7B9B6F] focus:ring-0">
+                                                <button type="submit" class="bg-[#7B9B6F] text-white px-2 py-1 rounded text-xs hover:bg-[#5A6852] transition">Simpan</button>
+                                            </form>
+                                        </div>
+                                    @empty
+                                        <span class="text-xs text-gray-400">Belum ada varian. Tambahkan lewat API.</span>
+                                    @endforelse
+                                    @if($product->description)
+                                        <div class="mt-2 text-[10px] text-gray-400 italic">Deskripsi: {{ $product->description }}</div>
+                                    @endif
+                                </div>
+                            </td>
+                            <td class="py-4 px-6 text-right">
+                                <button
+                                    onclick="openProductEditModal('{{ $product->id }}','{{ addslashes($product->name) }}','{{ $product->category_id }}','{{ addslashes($product->description ?? '') }}')"
+                                    class="text-gray-400 hover:text-[#7B9B6F] transition p-1" title="Edit">
+                                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"
+                                            d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
+                                    </svg>
+                                </button>
+                                <form method="POST" action="{{ route('dashboard.products.destroy', $product->id) }}"
+                                    class="inline-block"
+                                    onsubmit="return confirm('Yakin hapus produk {{ addslashes($product->name) }}?')">
+                                    @csrf
+                                    @method('DELETE')
+                                    <button type="submit" class="text-gray-400 hover:text-red-500 transition p-1 ml-1"
+                                        title="Hapus">
+                                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2"
+                                                d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                        </svg>
+                                    </button>
+                                </form>
+                            </td>
+                        </tr>
+                    @empty
+                        <tr>
+                            <td colspan="4" class="py-12 text-center text-gray-400">Belum ada data produk di sistem.</td>
+                        </tr>
+                    @endforelse
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- ===== CREATE PRODUCT MODAL ===== -->
+    <div id="modal-create-product"
+        class="hidden fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md max-h-[90vh] overflow-y-auto">
+            <div class="flex items-center justify-between p-6 border-b border-gray-100">
+                <h2 class="text-lg font-bold text-gray-800">Tambah Produk Baru</h2>
+                <button onclick="closeProductCreateModal()" class="text-gray-400 hover:text-gray-600 transition">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+            <form action="{{ route('dashboard.products.store') }}" method="POST" enctype="multipart/form-data" class="p-6 space-y-4">
+                @csrf
+                <div>
+                    <label class="block text-xs font-semibold text-gray-600 mb-1.5">Nama Produk <span
+                            class="text-red-500">*</span></label>
+                    <input type="text" name="name" required maxlength="50" placeholder="Contoh: Pulpen Pilot BPT"
+                        class="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#7B9B6F] transition">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-gray-600 mb-1.5">Kategori <span
+                            class="text-red-500">*</span></label>
+                    <select name="category_id" required
+                        class="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#7B9B6F] transition bg-white">
+                        <option value="">-- Pilih Kategori --</option>
+                        @foreach($categories as $cat)
+                            <option value="{{ $cat->id }}">{{ $cat->name }}</option>
+                        @endforeach
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-gray-600 mb-1.5">Deskripsi</label>
+                    <textarea name="description" rows="3" placeholder="Deskripsi produk (opsional)"
+                        class="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#7B9B6F] transition resize-none"></textarea>
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-gray-600 mb-1.5">Foto Produk <span class="text-[10px] text-gray-400 font-normal">(bisa pilih banyak logo/gambar)</span></label>
+                    <input type="file" name="attachments[]" multiple accept="image/*"
+                        class="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-[#E8F0E5] file:text-[#5A6852] hover:file:bg-[#D5E1D1] transition cursor-pointer">
+                </div>
+                <div class="flex gap-3 pt-2">
+                    <button type="button" onclick="closeProductCreateModal()"
+                        class="flex-1 py-2.5 border border-gray-200 text-gray-600 rounded-xl text-sm font-medium hover:bg-gray-50 transition">Batal</button>
+                    <button type="submit"
+                        class="flex-1 py-2.5 bg-[#7B9B6F] hover:bg-[#5A6852] text-white rounded-xl text-sm font-semibold transition shadow">Simpan</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- ===== EDIT PRODUCT MODAL ===== -->
+    <div id="modal-edit-product"
+        class="hidden fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md max-h-[90vh] overflow-y-auto">
+            <div class="flex items-center justify-between p-6 border-b border-gray-100">
+                <h2 class="text-lg font-bold text-gray-800">Edit Produk</h2>
+                <button onclick="closeProductEditModal()" class="text-gray-400 hover:text-gray-600 transition">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+            <form id="edit-product-form" method="POST" enctype="multipart/form-data" class="p-6 space-y-4">
+                @csrf
+                @method('PUT')
+                <div>
+                    <label class="block text-xs font-semibold text-gray-600 mb-1.5">Nama Produk <span
+                            class="text-red-500">*</span></label>
+                    <input type="text" name="name" id="edit-product-name" required maxlength="50"
+                        class="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#7B9B6F] transition">
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-gray-600 mb-1.5">Kategori <span
+                            class="text-red-500">*</span></label>
+                    <select name="category_id" id="edit-product-category" required
+                        class="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#7B9B6F] transition bg-white">
+                        @foreach($categories as $cat)
+                            <option value="{{ $cat->id }}">{{ $cat->name }}</option>
+                        @endforeach
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-gray-600 mb-1.5">Deskripsi</label>
+                    <textarea name="description" id="edit-product-description" rows="3"
+                        class="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#7B9B6F] transition resize-none"></textarea>
+                </div>
+                <div>
+                    <label class="block text-xs font-semibold text-gray-600 mb-1.5">Tambah Foto <span class="text-[10px] text-gray-400 font-normal">(foto sebelumnya tidak dihapus jika uplaod baru)</span></label>
+                    <input type="file" name="attachments[]" multiple accept="image/*"
+                        class="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-[#E8F0E5] file:text-[#5A6852] hover:file:bg-[#D5E1D1] transition cursor-pointer">
+                </div>
+                <div class="flex gap-3 pt-2">
+                    <button type="button" onclick="closeProductEditModal()"
+                        class="flex-1 py-2.5 border border-gray-200 text-gray-600 rounded-xl text-sm font-medium hover:bg-gray-50 transition">Batal</button>
+                    <button type="submit"
+                        class="flex-1 py-2.5 bg-[#7B9B6F] hover:bg-[#5A6852] text-white rounded-xl text-sm font-semibold transition shadow">Update</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    @push('scripts')
+        <script>
+            function openProductCreateModal() { document.getElementById('modal-create-product').classList.remove('hidden'); }
+            function closeProductCreateModal() { document.getElementById('modal-create-product').classList.add('hidden'); }
+            function openProductEditModal(id, name, categoryId, description) {
+                const form = document.getElementById('edit-product-form');
+                form.action = `/dashboard/products/${id}`;
+                document.getElementById('edit-product-name').value = name;
+                document.getElementById('edit-product-category').value = categoryId;
+                document.getElementById('edit-product-description').value = description;
+                document.getElementById('modal-edit-product').classList.remove('hidden');
+            }
+            function closeProductEditModal() { document.getElementById('modal-edit-product').classList.add('hidden'); }
+            function filterProducts(query) {
+                const q = query.toLowerCase();
+                document.querySelectorAll('.product-row').forEach(row => {
+                    row.style.display = row.dataset.name.includes(q) ? '' : 'none';
+                });
+            }
+            ['modal-create-product', 'modal-edit-product'].forEach(id => {
+                document.getElementById(id).addEventListener('click', function (e) {
+                    if (e.target === this) this.classList.add('hidden');
+                });
+            });
+        </script>
+    @endpush
+
+@endsection
