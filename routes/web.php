@@ -19,6 +19,7 @@ use App\Http\Controllers\DashboardController;
 // ================= WEB CONTROLLERS =================
 use App\Http\Controllers\Web\ProductController as WebProductController;
 use App\Http\Controllers\Web\OrderController as WebOrderController;
+use App\Http\Controllers\Web\BatchController as WebBatchController;
 
 // ================= FRONTEND =================
 use App\Http\Controllers\OrderController;
@@ -141,6 +142,12 @@ Route::prefix('dashboard')->group(function () {
     // Order Queue Management (delegated to Web\OrderController)
     Route::get('/queues', [WebOrderController::class, 'index'])->name('dashboard.queues');
     Route::post('/queues/{id}/status', [WebOrderController::class, 'updateStatus'])->name('dashboard.queues.status');
+
+    // Batch Stock Management (delegated to Web\BatchController)
+    Route::get('/batches', [WebBatchController::class, 'index'])->name('dashboard.batches');
+    Route::post('/batches', [WebBatchController::class, 'store'])->name('dashboard.batches.store');
+    Route::post('/batches/{id}/toggle', [WebBatchController::class, 'toggleActive'])->name('dashboard.batches.toggle');
+    Route::delete('/batches/{id}', [WebBatchController::class, 'destroy'])->name('dashboard.batches.destroy');
 
     Route::get('/chart', [DashboardController::class, 'chart']);
     Route::get('/reports/orders', [DashboardController::class, 'reportOrders']);
