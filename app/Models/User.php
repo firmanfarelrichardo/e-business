@@ -3,7 +3,6 @@
 namespace App\Models;
 
 use App\Traits\HasUuid;
-use Database\Factories\UserFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Foundation\Auth\User as Authenticatable;
@@ -57,5 +56,20 @@ class User extends Authenticatable
     {
         return $this->hasMany(Order::class, 'employee_id');
     }
-}
 
+    // Scope untuk filter berdasarkan role
+    public function scopeMembers($query)
+    {
+        return $query->where('role', 'member');
+    }
+
+    public function scopeEmployees($query)
+    {
+        return $query->where('role', 'employee');
+    }
+
+    public function scopeActive($query)
+    {
+        return $query->where('is_active', true);
+    }
+}

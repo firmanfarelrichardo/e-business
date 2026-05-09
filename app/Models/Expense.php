@@ -16,6 +16,7 @@ class Expense extends Model
         'note',
         'batch_id',
         'created_by',
+        'created_at',
     ];
 
     protected function casts(): array

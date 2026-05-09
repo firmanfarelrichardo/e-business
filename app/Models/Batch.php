@@ -2,15 +2,15 @@
 
 namespace App\Models;
 
+use App\Traits\HasUuid;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Concerns\HasUuids;
 
 class Batch extends Model
 {
-    use HasFactory, HasUuids;
+    use HasFactory, HasUuid;
 
-    public $timestamps = false; // We only have created_at from migration
+    public $timestamps = false;
 
     protected $fillable = [
         'batch_code',
@@ -23,10 +23,14 @@ class Batch extends Model
         'created_at'
     ];
 
-    protected $casts = [
-        'is_active' => 'boolean',
-        'created_at' => 'datetime'
-    ];
+    protected function casts(): array
+    {
+        return [
+            'purchase_price' => 'decimal:0',
+            'is_active' => 'boolean',
+            'created_at' => 'datetime'
+        ];
+    }
 
     public function productBrand()
     {

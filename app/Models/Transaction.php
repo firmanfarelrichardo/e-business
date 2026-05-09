@@ -17,6 +17,7 @@ class Transaction extends Model
         'transaction_status',
         'gateway_response',
         'payment_type_id',
+        'created_at',
         'paid_at',
     ];
 
