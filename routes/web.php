@@ -20,6 +20,7 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\Web\ProductController as WebProductController;
 use App\Http\Controllers\Web\OrderController as WebOrderController;
 use App\Http\Controllers\Web\BatchController as WebBatchController;
+use App\Http\Controllers\Web\StockCardController;
 
 // ================= FRONTEND =================
 use App\Http\Controllers\OrderController;
@@ -148,6 +149,9 @@ Route::prefix('dashboard')->group(function () {
     Route::post('/batches', [WebBatchController::class, 'store'])->name('dashboard.batches.store');
     Route::post('/batches/{id}/toggle', [WebBatchController::class, 'toggleActive'])->name('dashboard.batches.toggle');
     Route::delete('/batches/{id}', [WebBatchController::class, 'destroy'])->name('dashboard.batches.destroy');
+
+    // Stock Card Report (delegated to Web\StockCardController)
+    Route::get('/reports/stock-card', [StockCardController::class, 'index'])->name('dashboard.reports.stock-card');
 
     Route::get('/chart', [DashboardController::class, 'chart']);
     Route::get('/reports/orders', [DashboardController::class, 'reportOrders']);
