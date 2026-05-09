@@ -1,133 +1,158 @@
 <x-layouts.app title="Keranjang Belanja - Sinergi">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-4 lg:mt-8">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-8 mb-16">
         
-        <div class="flex items-center gap-3 mb-8">
-            <a href="{{ url('/katalog') }}" class="w-10 h-10 bg-white/50 rounded-full flex items-center justify-center hover:bg-white text-slate-600 shadow-sm transition">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
-            </a>
-            <h1 class="text-3xl font-bold text-brand-dark">Keranjang Belanja</h1>
+        <div class="mb-8">
+            <h1 class="text-2xl font-bold text-gray-800 tracking-tight">Keranjang Belanja</h1>
+            <p class="text-sm text-gray-500 mt-1">Periksa kembali pesanan ATK dan layanan Fotocopy Anda sebelum checkout.</p>
         </div>
+
+        @if(session('success'))
+            <div class="mb-6 bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-xl text-sm flex items-center gap-2 shadow-sm">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                {{ session('success') }}
+            </div>
+        @endif
+        @if(session('error'))
+            <div class="mb-6 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl text-sm flex items-center gap-2 shadow-sm">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
+                {{ session('error') }}
+            </div>
+        @endif
 
         <div class="flex flex-col lg:flex-row gap-8">
             
             <!-- Left: Cart Items -->
             <div class="w-full lg:w-2/3">
-                <x-ui.glass-card class="p-0 border-none overflow-visible">
-                    
-                    <!-- Table Header (Hidden on Mobile) -->
-                    <div class="hidden md:grid grid-cols-12 gap-4 px-8 py-4 bg-white/40 border-b border-white/60 rounded-t-[2rem]">
-                        <div class="col-span-6 text-sm font-bold text-slate-500 uppercase tracking-wider">Produk</div>
-                        <div class="col-span-3 text-sm font-bold text-slate-500 uppercase tracking-wider text-center">Kuantitas</div>
-                        <div class="col-span-3 text-sm font-bold text-slate-500 uppercase tracking-wider text-right">Subtotal</div>
-                    </div>
+                @if(!$cart || $cart->items->isEmpty())
+                    <x-ui.glass-card class="p-12 text-center border border-gray-100 shadow-sm rounded-3xl">
+                        <svg class="w-16 h-16 mx-auto mb-4 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"/></svg>
+                        <h3 class="text-lg font-semibold text-gray-600 mb-2">Keranjang Anda Masih Kosong</h3>
+                        <p class="text-sm text-gray-400 mb-6">Mulai eksplorasi katalog produk dan jasa kami untuk menemukan yang Anda butuhkan.</p>
+                        <a href="{{ url('/katalog') }}" class="inline-flex items-center justify-center px-6 py-3 bg-brand-primary text-white rounded-xl font-medium hover:bg-brand-dark transition shadow-sm">
+                            Belanja Sekarang
+                        </a>
+                    </x-ui.glass-card>
+                @else
+                    <div class="space-y-4">
+                        @foreach($cart->items as $item)
+                            @php
+                                $isProduct = !is_null($item->productBrand);
+                                $name = $isProduct ? $item->productBrand->product->name : $item->service->name;
+                                $subName = $isProduct ? $item->productBrand->brand->name . ' (' . $item->productBrand->unit . ')' : 'Jasa';
+                                $price = $isProduct ? $item->productBrand->selling_price : $item->service->piece_price;
+                                $subtotal = $price * $item->quantity;
+                            @endphp
+                            
+                            <x-ui.glass-card class="p-5 border border-gray-100 shadow-sm rounded-2xl flex flex-col sm:flex-row items-start sm:items-center gap-5">
+                                
+                                <!-- Icon/Image Placeholder -->
+                                <div class="w-16 h-16 rounded-xl shrink-0 flex items-center justify-center {{ $isProduct ? 'bg-blue-50 text-blue-500' : 'bg-emerald-50 text-emerald-500' }}">
+                                    @if($isProduct)
+                                        <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"/></svg>
+                                    @else
+                                        <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M8 7v8a2 2 0 002 2h6M8 7V5a2 2 0 012-2h4.586a1 1 0 01.707.293l4.414 4.414a1 1 0 01.293.707V15a2 2 0 01-2 2h-2M8 7H6a2 2 0 00-2 2v10a2 2 0 002 2h8a2 2 0 002-2v-2"/></svg>
+                                    @endif
+                                </div>
 
-                    <!-- Cart Item 1 -->
-                    <div class="grid grid-cols-1 md:grid-cols-12 gap-4 items-center px-6 md:px-8 py-6 border-b border-white/40 hover:bg-white/20 transition-colors">
-                        <div class="col-span-1 md:col-span-6 flex items-center gap-4">
-                            <div class="w-20 h-20 bg-white rounded-xl p-2 shrink-0 border border-slate-100 shadow-sm">
-                                <img src="https://images.unsplash.com/photo-1590264024503-49d636ff6d93?q=80&w=200&auto=format&fit=crop" class="w-full h-full object-contain" alt="Snowman Marker">
-                            </div>
-                            <div>
-                                <h4 class="font-bold text-slate-800 text-lg mb-1">Snowman Refill Ballpoint V-5</h4>
-                                <p class="text-sm text-brand-primary font-semibold">Rp 16.000 <span class="text-xs text-slate-400 font-normal">/ unit</span></p>
-                            </div>
-                        </div>
-                        <div class="col-span-1 md:col-span-3 flex items-center justify-between md:justify-center mt-4 md:mt-0">
-                            <span class="md:hidden text-sm text-slate-500 font-bold">Kuantitas:</span>
-                            <div class="flex items-center gap-3 bg-white/50 px-3 py-1 rounded-lg border border-slate-200">
-                                <button class="text-slate-500 hover:text-brand-primary p-1"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4"></path></svg></button>
-                                <span class="font-bold text-slate-800 w-6 text-center">2</span>
-                                <button class="text-slate-500 hover:text-brand-primary p-1"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg></button>
-                            </div>
-                        </div>
-                        <div class="col-span-1 md:col-span-3 flex items-center justify-between md:justify-end mt-2 md:mt-0">
-                            <span class="md:hidden text-sm text-slate-500 font-bold">Subtotal:</span>
-                            <div class="text-right">
-                                <span class="font-bold text-slate-800 text-lg">Rp 32.000</span>
-                            </div>
-                        </div>
-                        <!-- Delete action -->
-                        <div class="absolute right-6 mt-[-100px] md:mt-0 md:relative md:col-span-12 md:flex justify-end hidden">
-                            <button class="text-red-400 hover:text-red-600 text-sm font-medium flex items-center gap-1 transition">
-                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
-                                Hapus
-                            </button>
-                        </div>
-                    </div>
+                                <!-- Item Details -->
+                                <div class="flex-1">
+                                    <div class="flex items-center gap-2 mb-1">
+                                        <span class="text-xs font-semibold px-2 py-0.5 rounded-full {{ $isProduct ? 'bg-blue-100 text-blue-700' : 'bg-emerald-100 text-emerald-700' }}">
+                                            {{ $isProduct ? 'Produk ATK' : 'Jasa' }}
+                                        </span>
+                                    </div>
+                                    <h4 class="text-gray-800 font-bold text-base leading-tight">{{ $name }}</h4>
+                                    <p class="text-xs text-gray-500 mt-0.5">{{ $subName }}</p>
+                                    <div class="text-sm font-bold text-brand-dark mt-2">Rp {{ number_format($price, 0, ',', '.') }}</div>
+                                </div>
 
-                    <!-- Cart Item 2 -->
-                    <div class="grid grid-cols-1 md:grid-cols-12 gap-4 items-center px-6 md:px-8 py-6 hover:bg-white/20 transition-colors">
-                        <div class="col-span-1 md:col-span-6 flex items-center gap-4">
-                            <div class="w-20 h-20 bg-white rounded-xl p-2 shrink-0 border border-slate-100 shadow-sm flex items-center justify-center text-brand-secondary">
-                                <svg class="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path></svg>
-                            </div>
-                            <div>
-                                <span class="bg-brand-tertiary text-brand-dark text-[10px] font-bold px-2 py-0.5 rounded uppercase tracking-wider mb-1 inline-block">Jasa</span>
-                                <h4 class="font-bold text-slate-800 text-lg mb-1">Print A4 Berwarna</h4>
-                                <p class="text-sm text-brand-primary font-semibold">Rp 1.500 <span class="text-xs text-slate-400 font-normal">/ lembar</span></p>
-                            </div>
-                        </div>
-                        <div class="col-span-1 md:col-span-3 flex items-center justify-between md:justify-center mt-4 md:mt-0">
-                            <span class="md:hidden text-sm text-slate-500 font-bold">Kuantitas:</span>
-                            <div class="flex items-center gap-3 bg-white/50 px-3 py-1 rounded-lg border border-slate-200">
-                                <button class="text-slate-500 hover:text-brand-primary p-1"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4"></path></svg></button>
-                                <span class="font-bold text-slate-800 w-6 text-center">10</span>
-                                <button class="text-slate-500 hover:text-brand-primary p-1"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg></button>
-                            </div>
-                        </div>
-                        <div class="col-span-1 md:col-span-3 flex items-center justify-between md:justify-end mt-2 md:mt-0">
-                            <span class="md:hidden text-sm text-slate-500 font-bold">Subtotal:</span>
-                            <div class="text-right">
-                                <span class="font-bold text-slate-800 text-lg">Rp 15.000</span>
-                            </div>
-                        </div>
-                        <div class="absolute right-6 mt-[-100px] md:mt-0 md:relative md:col-span-12 md:flex justify-end hidden">
-                            <button class="text-red-400 hover:text-red-600 text-sm font-medium flex items-center gap-1 transition">
-                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
-                                Hapus
-                            </button>
-                        </div>
+                                <!-- Quantity Control & Delete -->
+                                <div class="flex items-center gap-4 w-full sm:w-auto mt-4 sm:mt-0 justify-between sm:justify-end">
+                                    
+                                    <form action="{{ route('keranjang.update', $item->id) }}" method="POST" class="flex items-center border border-gray-200 rounded-lg overflow-hidden bg-white shadow-sm">
+                                        @csrf
+                                        @method('PUT')
+                                        <button type="submit" name="quantity" value="{{ $item->quantity - 1 }}" class="px-3 py-1.5 text-gray-500 hover:bg-gray-50 transition" {{ $item->quantity <= 1 ? 'disabled' : '' }}>
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 12H4"/></svg>
+                                        </button>
+                                        
+                                        <div class="px-3 py-1.5 text-sm font-semibold text-gray-800 border-x border-gray-200 min-w-[2.5rem] text-center">
+                                            {{ $item->quantity }}
+                                        </div>
+
+                                        <button type="submit" name="quantity" value="{{ $item->quantity + 1 }}" class="px-3 py-1.5 text-gray-500 hover:bg-gray-50 transition">
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/></svg>
+                                        </button>
+                                    </form>
+
+                                    <div class="text-right sm:hidden ml-auto mr-4">
+                                        <div class="text-xs text-gray-400">Subtotal</div>
+                                        <div class="text-sm font-bold text-gray-800">Rp {{ number_format($subtotal, 0, ',', '.') }}</div>
+                                    </div>
+
+                                    <form action="{{ route('keranjang.remove', $item->id) }}" method="POST">
+                                        @csrf
+                                        @method('DELETE')
+                                        <button type="submit" class="p-2 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition" title="Hapus Item" onsubmit="return confirm('Hapus item ini?')">
+                                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                                        </button>
+                                    </form>
+
+                                </div>
+                                
+                                <!-- Desktop Subtotal -->
+                                <div class="hidden sm:block text-right w-24">
+                                    <div class="text-xs text-gray-400 mb-1">Subtotal</div>
+                                    <div class="text-sm font-bold text-gray-800">Rp {{ number_format($subtotal, 0, ',', '.') }}</div>
+                                </div>
+
+                            </x-ui.glass-card>
+                        @endforeach
                     </div>
-                </x-ui.glass-card>
+                @endif
             </div>
 
             <!-- Right: Order Summary -->
-            <div class="w-full lg:w-1/3">
-                <x-ui.glass-card variant="dark" class="p-8 sticky top-32">
-                    <h3 class="text-xl font-bold text-white mb-6">Ringkasan Pesanan</h3>
-                    
-                    <div class="space-y-4 mb-6">
-                        <div class="flex justify-between text-white/80">
-                            <span>Subtotal Produk</span>
-                            <span class="font-medium text-white">Rp 47.000</span>
+            @if($cart && !$cart->items->isEmpty())
+                <div class="w-full lg:w-1/3">
+                    <x-ui.glass-card class="p-6 border border-gray-100 shadow-sm rounded-3xl sticky top-8">
+                        <h3 class="text-lg font-bold text-gray-800 mb-6">Ringkasan Pesanan</h3>
+                        
+                        <div class="space-y-4 mb-6">
+                            <div class="flex justify-between text-sm">
+                                <span class="text-gray-500">Total Item</span>
+                                <span class="font-semibold text-gray-800">{{ $cart->items->sum('quantity') }}</span>
+                            </div>
+                            <div class="flex justify-between text-sm">
+                                <span class="text-gray-500">Total Harga</span>
+                                <span class="font-semibold text-gray-800">Rp {{ number_format($totalPrice, 0, ',', '.') }}</span>
+                            </div>
+                            <!-- Add additional fees here if needed (e.g., service fee, tax) -->
                         </div>
-                        <div class="flex justify-between text-white/80">
-                            <span>Biaya Layanan</span>
-                            <span class="font-medium text-white">Rp 0</span>
+                        
+                        <hr class="border-gray-100 mb-6">
+                        
+                        <div class="flex justify-between items-end mb-8">
+                            <span class="text-base font-semibold text-gray-600">Total Tagihan</span>
+                            <span class="text-2xl font-extrabold text-brand-dark">Rp {{ number_format($totalPrice, 0, ',', '.') }}</span>
                         </div>
-                    </div>
-                    
-                    <div class="border-t border-white/20 pt-6 mb-8 flex justify-between items-end">
-                        <span class="text-white/80 font-medium">Total Harga</span>
-                        <span class="text-3xl font-extrabold text-white tracking-tight">Rp 47.000</span>
-                    </div>
 
-                    <div class="mb-6">
-                        <label class="block text-white/80 text-sm font-medium mb-2">Catatan Pesanan (Opsional)</label>
-                        <textarea class="w-full bg-white/10 border border-white/20 rounded-xl px-4 py-3 text-white placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-brand-tertiary focus:border-transparent transition-all" rows="3" placeholder="Misal: Tolong dipisahkan plastiknya..."></textarea>
-                    </div>
-                    
-                    <button class="w-full bg-gradient-to-r from-brand-primary to-brand-secondary hover:from-brand-secondary hover:to-brand-primary text-brand-dark font-bold text-lg py-4 rounded-xl shadow-lg hover:shadow-brand-primary/50 transform hover:-translate-y-1 transition duration-300">
-                        Proses Checkout
-                    </button>
-                    
-                    <p class="text-center text-white/50 text-xs mt-4">
-                        <svg class="w-3 h-3 inline mr-1" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clip-rule="evenodd"></path></svg>
-                        Pembayaran dienkripsi secara aman
-                    </p>
-                </x-ui.glass-card>
-            </div>
-            
+                        <form action="{{ route('keranjang.checkout') }}" method="POST">
+                            @csrf
+                            <button type="submit" class="w-full py-4 bg-brand-primary hover:bg-brand-dark text-white rounded-xl font-bold text-base transition shadow flex items-center justify-center gap-2 group">
+                                <span>Lanjut Pembayaran</span>
+                                <svg class="w-5 h-5 group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"/></svg>
+                            </button>
+                        </form>
+
+                        <div class="mt-4 flex items-center justify-center gap-2 text-xs text-gray-400">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+                            Checkout aman & dienkripsi
+                        </div>
+                    </x-ui.glass-card>
+                </div>
+            @endif
+
         </div>
     </div>
 </x-layouts.app>

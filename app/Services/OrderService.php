@@ -7,6 +7,8 @@ use App\Repositories\OrderItemRepository;
 use App\Repositories\BatchRepository;
 use App\Repositories\ProductBrandRepository;
 use App\Repositories\ServiceRepository;
+use App\Repositories\CartRepository;
+use App\Models\User;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Carbon\Carbon;
@@ -30,19 +32,22 @@ class OrderService
     protected BatchRepository $batchRepository;
     protected ProductBrandRepository $productBrandRepository;
     protected ServiceRepository $serviceRepository;
+    protected CartRepository $cartRepository;
 
     public function __construct(
         OrderRepository $orderRepository,
         OrderItemRepository $orderItemRepository,
         BatchRepository $batchRepository,
         ProductBrandRepository $productBrandRepository,
-        ServiceRepository $serviceRepository
+        ServiceRepository $serviceRepository,
+        CartRepository $cartRepository
     ) {
         $this->orderRepository = $orderRepository;
         $this->orderItemRepository = $orderItemRepository;
         $this->batchRepository = $batchRepository;
         $this->productBrandRepository = $productBrandRepository;
         $this->serviceRepository = $serviceRepository;
+        $this->cartRepository = $cartRepository;
     }
 
     /**
@@ -329,5 +334,47 @@ class OrderService
                 }
             }
         }
+    }
+
+    /**
+     * Checkout the user's cart into an order.
+     *
+     * Converts cart items to an order creation array and delegates
+     * to createOrder() to handle the transaction and stock validation.
+     * Clears the cart upon success.
+     *
+     * @param  \App\Models\User $user
+     * @return \App\Models\Order
+     * @throws \Exception
+     */
+    public function checkoutCart(User $user)
+    {
+        $cart = $this->cartRepository->findByUserId($user->id);
+
+        if (!$cart || $cart->items->isEmpty()) {
+            throw new Exception("Keranjang belanja kosong.");
+        }
+
+        $itemsData = [];
+        foreach ($cart->items as $item) {
+            $itemsData[] = [
+                'product_brand_id' => $item->product_brand_id,
+                'service_id'       => $item->service_id,
+                'quantity'         => $item->quantity,
+                'note'             => $item->note,
+            ];
+        }
+
+        $orderData = [
+            'user_id' => $user->id,
+            'items'   => $itemsData,
+            // 'employee_id' => null, (will be picked up by auto-assign if applicable, or left null)
+        ];
+
+        return DB::transaction(function () use ($orderData, $cart) {
+            $order = $this->createOrder($orderData);
+            $this->cartRepository->clearCart($cart->id);
+            return $order;
+        });
     }
 }

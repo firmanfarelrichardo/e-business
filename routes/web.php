@@ -14,6 +14,7 @@ use App\Http\Controllers\Api\StockReportController;
 use App\Http\Controllers\Api\UserController;
 use App\Http\Controllers\Api\ExpenseController;
 use App\Http\Controllers\Front\CatalogController;
+use App\Http\Controllers\Front\CartController;
 use App\Http\Controllers\DashboardController;
 
 // ================= WEB CONTROLLERS =================
@@ -73,7 +74,14 @@ Route::post('/web-auth/logout', function (Illuminate\Http\Request $request) {
 // -- Catalog UI Pages -----------------------------------------------------
 Route::get('/katalog', [CatalogController::class, 'index']);
 Route::get('/jasa', [CatalogController::class, 'jasa']);
-Route::get('/keranjang', [CatalogController::class, 'keranjang']);
+
+Route::middleware(['auth'])->group(function () {
+    Route::get('/keranjang', [CartController::class, 'index'])->name('keranjang.index');
+    Route::post('/keranjang/add', [CartController::class, 'add'])->name('keranjang.add');
+    Route::put('/keranjang/update/{id}', [CartController::class, 'updateQuantity'])->name('keranjang.update');
+    Route::delete('/keranjang/remove/{id}', [CartController::class, 'remove'])->name('keranjang.remove');
+    Route::post('/keranjang/checkout', [CartController::class, 'checkout'])->name('keranjang.checkout');
+});
 
 Route::get('/not-configured', function () {
     return view('errors.not-configured');
