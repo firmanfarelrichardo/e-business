@@ -25,6 +25,19 @@ class OrderItemRepository
     }
 
     /**
+     * Update an existing order item record.
+     *
+     * @param  \App\Models\OrderItem $item
+     * @param  array $data
+     * @return \App\Models\OrderItem
+     */
+    public function update(OrderItem $item, array $data)
+    {
+        $item->update($data);
+        return $item;
+    }
+
+    /**
      * Bulk-insert multiple order items.
      *
      * Uses Eloquent's insert() for performance when creating all items

@@ -305,6 +305,7 @@ class OrderService
         foreach ($order->items as $item) {
             if ($item->product_brand_id) {
                 $quantityToDeduct = $item->quantity;
+                $totalCogs = 0;
 
                 // CRITICAL HOOK: Pessimistic locking to prevent race condition during checkout
                 $this->batchRepository->lockProductBrandForUpdate($item->product_brand_id);
@@ -319,11 +320,13 @@ class OrderService
 
                     if ($batch->current_stock >= $quantityToDeduct) {
                         // This batch has enough stock to fulfill the remainder
+                        $totalCogs += $quantityToDeduct * $batch->purchase_price;
                         $newStock = $batch->current_stock - $quantityToDeduct;
                         $this->batchRepository->update($batch, ['current_stock' => $newStock]);
                         $quantityToDeduct = 0;
                     } else {
                         // Consume all stock from this batch and continue to the next
+                        $totalCogs += $batch->current_stock * $batch->purchase_price;
                         $quantityToDeduct -= $batch->current_stock;
                         $this->batchRepository->update($batch, ['current_stock' => 0]);
                     }
@@ -335,6 +338,20 @@ class OrderService
                         "Sisa {$quantityToDeduct} unit tidak dapat dipenuhi dari batch aktif."
                     );
                 }
+
+                /*
+                 * DATA IMMUTABILITY GUARANTEE:
+                 * COGS (Cost of Goods Sold) is calculated strictly based on the physical
+                 * batches consumed during this exact transaction. By snapshotting this
+                 * value into the order_item, historical profit margins are permanently locked.
+                 * Even if batch prices are edited or recalculated in the future, this
+                 * order's profitability metrics will remain perfectly intact and accurate.
+                 */
+                $this->orderItemRepository->update($item, ['cogs' => $totalCogs]);
+
+            } else {
+                // For Services, COGS is currently 0 as there is no inventory cost.
+                $this->orderItemRepository->update($item, ['cogs' => 0]);
             }
         }
     }
