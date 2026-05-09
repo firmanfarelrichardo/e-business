@@ -5,56 +5,188 @@ namespace App\Services;
 use App\Repositories\ProductRepository;
 use Illuminate\Support\Facades\Storage;
 
+/**
+ * ProductService
+ *
+ * Central business logic layer for all product operations.
+ * This service orchestrates file handling (upload/removal of product
+ * attachments) and delegates pure data persistence to the repository.
+ *
+ * Both the API controllers and the dashboard web controllers consume
+ * this single service, ensuring consistent behavior regardless of
+ * the entry point.
+ */
 class ProductService
 {
-    protected $productRepository;
+    protected ProductRepository $productRepository;
 
     public function __construct(ProductRepository $productRepository)
     {
         $this->productRepository = $productRepository;
     }
 
+    /**
+     * Retrieve all products with basic category relation.
+     *
+     * Suitable for API responses where inventory data is fetched
+     * separately or not needed at all.
+     *
+     * @return \Illuminate\Database\Eloquent\Collection
+     */
     public function getAllProducts()
     {
         return $this->productRepository->getAllWithRelations();
     }
 
+    /**
+     * Retrieve all products with full inventory hierarchy.
+     *
+     * Returns products eager-loaded with category, brand variants,
+     * and their respective batch stock data. Designed for the dashboard
+     * products table where stock counts and WAC are displayed inline.
+     *
+     * @return \Illuminate\Database\Eloquent\Collection
+     */
+    public function getAllProductsWithInventory()
+    {
+        return $this->productRepository->getAllWithBrandsAndBatches();
+    }
+
+    /**
+     * Retrieve a single product by UUID.
+     *
+     * @param  string $id  UUID of the product
+     * @return \App\Models\Product
+     */
     public function getProductById($id)
     {
         return $this->productRepository->findById($id);
     }
 
-    public function createProduct(array $data)
+    /**
+     * Retrieve a single product with full inventory relations.
+     *
+     * @param  string $id  UUID of the product
+     * @return \App\Models\Product
+     */
+    public function getProductByIdWithRelations($id)
     {
-        if (isset($data['images']) && is_array($data['images'])) {
-            $data['attachments'] = $this->uploadImages($data['images']);
-        }
-
-        return $this->productRepository->create($data);
+        return $this->productRepository->findByIdWithRelations($id);
     }
 
+    /**
+     * Create a new product with optional attachment uploads.
+     *
+     * Processes uploaded image files first, storing them in the
+     * public disk under the `products/` directory. The resulting
+     * storage paths are saved as a JSON array in the `attachments`
+     * column, enabling the frontend to render them via Storage::url().
+     *
+     * @param  array $data  Validated request data (may include 'attachments' file array)
+     * @return \App\Models\Product
+     */
+    public function createProduct(array $data)
+    {
+        $paths = [];
+
+        if (isset($data['attachments']) && is_array($data['attachments'])) {
+            $paths = $this->uploadAttachments($data['attachments']);
+        }
+
+        return $this->productRepository->create([
+            'name'        => $data['name'],
+            'category_id' => $data['category_id'],
+            'description' => $data['description'] ?? null,
+            'attachments' => !empty($paths) ? $paths : null,
+        ]);
+    }
+
+    /**
+     * Update an existing product with attachment management.
+     *
+     * Supports three attachment operations in a single request:
+     * 1. Keep existing attachments that are not flagged for removal
+     * 2. Remove specific attachments (deletes files from storage)
+     * 3. Add new uploaded attachments to the collection
+     *
+     * This approach prevents data loss when only adding/removing
+     * individual images rather than replacing the entire set.
+     *
+     * @param  string $id    UUID of the product
+     * @param  array  $data  Validated request data
+     * @return \App\Models\Product
+     */
     public function updateProduct($id, array $data)
     {
         $product = $this->getProductById($id);
 
-        if (isset($data['images']) && is_array($data['images'])) {
-            // Optionally delete old images here if needed
-            $data['attachments'] = $this->uploadImages($data['images']);
+        // Start with the current attachment list
+        $existing = $product->attachments ?? [];
+
+        // Remove attachments flagged by the user
+        if (!empty($data['remove_attachments'])) {
+            foreach ($data['remove_attachments'] as $path) {
+                Storage::disk('public')->delete($path);
+            }
+            $existing = array_values(array_diff($existing, $data['remove_attachments']));
         }
 
-        return $this->productRepository->update($id, $data);
+        // Append newly uploaded files
+        if (isset($data['attachments']) && is_array($data['attachments'])) {
+            $newPaths = $this->uploadAttachments($data['attachments']);
+            $existing = array_merge($existing, $newPaths);
+        }
+
+        return $this->productRepository->update($id, [
+            'name'        => $data['name'],
+            'category_id' => $data['category_id'],
+            'description' => $data['description'] ?? null,
+            'attachments' => !empty($existing) ? array_values($existing) : null,
+        ]);
     }
 
+    /**
+     * Soft-delete a product and clean up its stored attachments.
+     *
+     * Files are removed from disk before the soft-delete because
+     * orphaned files in storage waste space and cannot be traced
+     * back to a deleted record. The database record itself is
+     * retained (soft-deleted) for order history integrity.
+     *
+     * @param  string $id  UUID of the product
+     * @return bool
+     */
     public function deleteProduct($id)
     {
+        $product = $this->getProductById($id);
+
+        // Clean up stored image files
+        if (!empty($product->attachments) && is_array($product->attachments)) {
+            foreach ($product->attachments as $path) {
+                Storage::disk('public')->delete($path);
+            }
+        }
+
         return $this->productRepository->delete($id);
     }
 
-    protected function uploadImages(array $images)
+    /**
+     * Store multiple image files to the public disk.
+     *
+     * Each file is stored under `products/` with a unique hash-based
+     * filename generated by Laravel's Storage facade. Returns an array
+     * of relative paths suitable for JSON serialization.
+     *
+     * @param  array $files  Array of UploadedFile instances
+     * @return array          Array of relative storage paths
+     */
+    protected function uploadAttachments(array $files): array
     {
         $paths = [];
-        foreach ($images as $image) {
-            $paths[] = $image->store('products', 'public');
+        foreach ($files as $file) {
+            if ($file instanceof \Illuminate\Http\UploadedFile) {
+                $paths[] = $file->store('products', 'public');
+            }
         }
         return $paths;
     }

@@ -16,15 +16,19 @@ use App\Http\Controllers\Api\ExpenseController;
 use App\Http\Controllers\Front\CatalogController;
 use App\Http\Controllers\DashboardController;
 
+// ================= WEB CONTROLLERS =================
+use App\Http\Controllers\Web\ProductController as WebProductController;
+use App\Http\Controllers\Web\OrderController as WebOrderController;
+
 // ================= FRONTEND =================
 use App\Http\Controllers\OrderController;
 
-// ── Landing Page ─────────────────────────────────────────────────
+// -- Landing Page ---------------------------------------------------------
 Route::get('/', function () {
     return view('welcome');
 });
 
-// ── Auth Pages (Blade) ────────────────────────────────────────────
+// -- Auth Pages (Blade) ---------------------------------------------------
 Route::get('/login', fn() => view('auth.auth', ['initialMode' => 'login']))->name('login');
 Route::get('/register', fn() => view('auth.auth', ['initialMode' => 'register']))->name('register');
 
@@ -64,7 +68,7 @@ Route::post('/web-auth/logout', function (Illuminate\Http\Request $request) {
     return redirect('/login');
 })->name('logout');
 
-// ── Catalog UI Pages ──────────────────────────────────────────────
+// -- Catalog UI Pages -----------------------------------------------------
 Route::get('/katalog', [CatalogController::class, 'index']);
 Route::get('/jasa', [CatalogController::class, 'jasa']);
 Route::get('/keranjang', [CatalogController::class, 'keranjang']);
@@ -115,11 +119,11 @@ Route::prefix('dashboard')->group(function () {
     Route::put('/users/{id}', [DashboardController::class, 'updateUser'])->name('dashboard.users.update');
     Route::delete('/users/{id}', [DashboardController::class, 'deleteUser'])->name('dashboard.users.destroy');
 
-    // Product Management
-    Route::get('/products', [DashboardController::class, 'products']);
-    Route::post('/products', [DashboardController::class, 'storeProduct'])->name('dashboard.products.store');
-    Route::put('/products/{id}', [DashboardController::class, 'updateProduct'])->name('dashboard.products.update');
-    Route::delete('/products/{id}', [DashboardController::class, 'deleteProduct'])->name('dashboard.products.destroy');
+    // Product Management (delegated to Web\ProductController)
+    Route::get('/products', [WebProductController::class, 'index']);
+    Route::post('/products', [WebProductController::class, 'store'])->name('dashboard.products.store');
+    Route::put('/products/{id}', [WebProductController::class, 'update'])->name('dashboard.products.update');
+    Route::delete('/products/{id}', [WebProductController::class, 'destroy'])->name('dashboard.products.destroy');
 
     // Service Management
     Route::get('/services', [DashboardController::class, 'services']);
@@ -134,9 +138,9 @@ Route::prefix('dashboard')->group(function () {
     // Selling Price Control (Owner + Employee)
     Route::put('/product-brands/{id}/price', [DashboardController::class, 'updateProductBrandPrice'])->name('dashboard.productbrand.price');
 
-    // Order Queue Management (Owner + Employee)
-    Route::get('/queues', [DashboardController::class, 'queues'])->name('dashboard.queues');
-    Route::post('/queues/{id}/status', [DashboardController::class, 'updateOrderStatus'])->name('dashboard.queues.status');
+    // Order Queue Management (delegated to Web\OrderController)
+    Route::get('/queues', [WebOrderController::class, 'index'])->name('dashboard.queues');
+    Route::post('/queues/{id}/status', [WebOrderController::class, 'updateStatus'])->name('dashboard.queues.status');
 
     Route::get('/chart', [DashboardController::class, 'chart']);
     Route::get('/reports/orders', [DashboardController::class, 'reportOrders']);

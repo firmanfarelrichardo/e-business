@@ -12,6 +12,18 @@ use App\Models\User;
 use App\Models\ProductBrand;
 use Carbon\Carbon;
 
+/**
+ * DashboardController
+ *
+ * Handles the main dashboard view, user profile, and modules that
+ * have not yet been extracted into dedicated controllers (services,
+ * users, expenses, reports).
+ *
+ * Product management and order queue management have been refactored
+ * into Web\ProductController and Web\OrderController respectively,
+ * following the 4-layered architecture (Controller -> Service ->
+ * Repository -> Model).
+ */
 class DashboardController extends Controller
 {
     public function __construct()
@@ -83,111 +95,6 @@ class DashboardController extends Controller
         }
 
         return redirect()->back();
-    }
-
-    // ===================== PRODUCTS =====================
-
-    public function products()
-    {
-        if (!auth()->check() || auth()->user()->role === 'member') {
-            return redirect('/');
-        }
-
-        $products = Product::with(['category', 'brands.batches', 'brands.brand'])->latest()->get();
-        $categories = \App\Models\ProductCategory::orderBy('name')->get();
-
-        return view('dashboard.products.index', compact('products', 'categories'));
-    }
-
-    public function storeProduct(Request $request)
-    {
-        if (auth()->user()->role === 'member')
-            abort(403);
-
-        $data = $request->validate([
-            'name' => 'required|string|max:50',
-            'category_id' => 'required|exists:product_categories,id',
-            'description' => 'nullable|string',
-            'attachments' => 'nullable|array',
-            'attachments.*' => 'image|mimes:jpeg,png,jpg,webp|max:4096',
-        ]);
-
-        $paths = [];
-        if ($request->hasFile('attachments')) {
-            foreach ($request->file('attachments') as $file) {
-                $paths[] = $file->store('products', 'public');
-            }
-        }
-
-        Product::create([
-            'name' => $data['name'],
-            'category_id' => $data['category_id'],
-            'description' => $data['description'] ?? null,
-            'attachments' => !empty($paths) ? $paths : null,
-        ]);
-
-        return redirect('/dashboard/products')->with('success', 'Produk berhasil ditambahkan.');
-    }
-
-    public function updateProduct(Request $request, string $id)
-    {
-        if (auth()->user()->role === 'member')
-            abort(403);
-
-        $product = Product::findOrFail($id);
-        $data = $request->validate([
-            'name' => 'required|string|max:50',
-            'category_id' => 'required|exists:product_categories,id',
-            'description' => 'nullable|string',
-            'attachments' => 'nullable|array',
-            'attachments.*' => 'image|mimes:jpeg,png,jpg,webp|max:4096',
-            'remove_attachments' => 'nullable|array',
-        ]);
-
-        // Start with existing attachments
-        $existing = $product->attachments ?? [];
-
-        // Remove flagged ones
-        if (!empty($data['remove_attachments'])) {
-            foreach ($data['remove_attachments'] as $path) {
-                Storage::disk('public')->delete($path);
-            }
-            $existing = array_values(array_diff($existing, $data['remove_attachments']));
-        }
-
-        // Add new uploads
-        if ($request->hasFile('attachments')) {
-            foreach ($request->file('attachments') as $file) {
-                $existing[] = $file->store('products', 'public');
-            }
-        }
-
-        $product->update([
-            'name' => $data['name'],
-            'category_id' => $data['category_id'],
-            'description' => $data['description'] ?? null,
-            'attachments' => !empty($existing) ? $existing : null,
-        ]);
-
-        return redirect('/dashboard/products')->with('success', 'Produk berhasil diupdate.');
-    }
-
-    public function deleteProduct(string $id)
-    {
-        if (auth()->user()->role === 'member')
-            abort(403);
-
-        $product = Product::findOrFail($id);
-
-        // Delete stored images
-        if (!empty($product->attachments)) {
-            foreach ($product->attachments as $path) {
-                Storage::disk('public')->delete($path);
-            }
-        }
-
-        $product->delete();
-        return redirect('/dashboard/products')->with('success', 'Produk berhasil dihapus.');
     }
 
     // ===================== PRODUCT BRAND PRICE =====================
@@ -445,64 +352,6 @@ class DashboardController extends Controller
         });
 
         return redirect('/dashboard/expenses')->with('success', 'Pengeluaran berhasil dicatat.');
-    }
-
-    // ===================== ORDER QUEUE MANAGEMENT =====================
-
-    public function queues()
-    {
-        if (!auth()->check() || auth()->user()->role === 'member') {
-            abort(403, 'Akses ditolak.');
-        }
-
-        $statusFilter = request('status', 'active');
-
-        $query = Order::with([
-            'user',
-            'employee',
-            'items.productBrand.product',
-            'items.service',
-        ])->orderBy('created_at', 'asc');
-
-        if ($statusFilter === 'pending') {
-            $query->where('status', 'pending');
-        } elseif ($statusFilter === 'processing') {
-            $query->where('status', 'processing');
-        } else {
-            $query->whereIn('status', ['pending', 'processing']);
-        }
-
-        $orders = $query->paginate(20)->withQueryString();
-        $pendingCount = Order::where('status', 'pending')->count();
-
-        return view('dashboard.queues.index', compact('orders', 'pendingCount', 'statusFilter'));
-    }
-
-    public function updateOrderStatus(Request $request, string $id)
-    {
-        if (!auth()->check() || auth()->user()->role === 'member') {
-            abort(403);
-        }
-
-        $data = $request->validate([
-            'status' => 'required|in:processing,completed,cancelled',
-        ]);
-
-        $order = Order::findOrFail($id);
-        $update = ['status' => $data['status']];
-
-        if ($data['status'] === 'completed') {
-            $update['completed_at'] = now();
-        }
-
-        // Assign current staff as handler if not already set
-        if (is_null($order->employee_id)) {
-            $update['employee_id'] = auth()->id();
-        }
-
-        $order->update($update);
-
-        return redirect()->back()->with('success', 'Status order berhasil diperbarui.');
     }
 
     // ===================== REPORTS =====================
