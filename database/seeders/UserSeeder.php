@@ -22,9 +22,9 @@ class UserSeeder extends Seeder
         // 1. Create System Owner (Admin)
         User::create([
             'id' => (string) Str::uuid(),
-            'name' => 'Owner Sinergi',
-            'username' => 'admin',
-            'email' => 'admin@sinergi.com',
+            'name' => 'Firman Farel Richardo',
+            'username' => 'firmanfarel',
+            'email' => 'firmanfarelrichardo@gmail.com',
             'password' => $password,
             'role' => 'owner',
             'email_verified_at' => now(),
@@ -46,6 +46,16 @@ class UserSeeder extends Seeder
             'name' => 'Elthon Jhon Kevin',
             'username' => 'elthonJhon_',
             'email' => 'elthonjhonkevin@gmail.com',
+            'password' => $password,
+            'role' => 'member',
+            'email_verified_at' => now(),
+        ]);
+
+        User::create([
+            'id' => (string) Str::uuid(),
+            'name' => 'Richardo',
+            'username' => 'richardo',
+            'email' => 'richardo@example.com',
             'password' => $password,
             'role' => 'member',
             'email_verified_at' => now(),
