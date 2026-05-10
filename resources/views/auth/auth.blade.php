@@ -97,7 +97,6 @@
             left: 0;
             width: 46%;
             overflow: hidden;
-            border-radius: 2rem;
             z-index: 20;
             transition:
                 left var(--dur) var(--ease),
