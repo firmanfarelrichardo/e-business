@@ -55,10 +55,8 @@ class ExpenseService
                 $affectedProductBrands[] = $item['product_brand_id'];
             }
 
-            // Recalculate WAC (queue model) for each affected ProductBrand
-            foreach (array_unique($affectedProductBrands) as $pbId) {
-                ProductBrand::find($pbId)?->recalculateWAC();
-            }
+            // The average cost (Modal) is computed dynamically via accessor,
+            // no need to recalculate and persist.
 
             return $expense->load('items.productBrand');
         });

@@ -102,9 +102,8 @@
                                 <div class="space-y-3">
                                     @forelse($product->brands as $pb)
                                         @php
-                                            $activeBatches = $pb->batches->where('current_stock', '>', 0);
-                                            $totalStock = $activeBatches->sum('current_stock');
-                                            $wacValue = $totalStock > 0 ? $activeBatches->sum(function($b) { return $b->purchase_price * $b->current_stock; }) / $totalStock : 0;
+                                            $totalStock = $pb->batches->where('is_active', true)->sum('current_stock');
+                                            $wacValue = $pb->average_cost;
                                         @endphp
                                         <div class="flex items-center justify-between gap-4 p-2 bg-gray-50 rounded-lg border border-gray-100 shadow-sm">
                                             <div class="text-xs">

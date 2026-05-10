@@ -48,6 +48,11 @@ class StockCardController extends Controller
         $endDate         = $request->input('end_date');
         $productBrandId  = $request->input('product_brand_id');
 
+        // If no product brand is selected, default to the first one
+        if (!$productBrandId && $productBrands->isNotEmpty()) {
+            $productBrandId = $productBrands->first()->id;
+        }
+
         // Generate report when a product brand is selected
         if ($productBrandId) {
             $selectedBrand = ProductBrand::with(['product', 'brand'])->find($productBrandId);

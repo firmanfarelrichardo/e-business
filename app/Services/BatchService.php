@@ -134,10 +134,8 @@ class BatchService
             // Uses SUM aggregate on all active batches for accuracy.
             $this->recalculateTotalStock($productBrand);
 
-            // STEP 5: Recalculate WAC (Weighted Average Cost).
-            // The selling_price on ProductBrand is updated to reflect
-            // the new weighted average across all active batches with stock.
-            $productBrand->recalculateWAC();
+            // The average cost (Modal) is now computed dynamically via accessor
+            // and does not overwrite selling_price.
 
             // Return the batch with loaded relations for the response
             return $this->batchRepository->findById($batch->id);
@@ -181,7 +179,7 @@ class BatchService
 
             // Recalculate totals after the stock values have changed
             $this->recalculateTotalStock($productBrand);
-            $productBrand->recalculateWAC();
+
 
             return $this->batchRepository->findById($batch->id);
         });
@@ -211,7 +209,7 @@ class BatchService
 
             // Recalculate after removal
             $this->recalculateTotalStock($productBrand);
-            $productBrand->recalculateWAC();
+
 
             return true;
         });
@@ -240,7 +238,7 @@ class BatchService
             ]);
 
             $this->recalculateTotalStock($productBrand);
-            $productBrand->recalculateWAC();
+
 
             return $this->batchRepository->findById($batch->id);
         });

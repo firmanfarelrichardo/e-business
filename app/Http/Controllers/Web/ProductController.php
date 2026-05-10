@@ -39,8 +39,9 @@ class ProductController extends Controller
     {
         $products   = $this->productService->getAllProductsWithInventory();
         $categories = ProductCategory::orderBy('name')->get();
+        $brands     = \App\Models\Brand::orderBy('name')->get();
 
-        return view('dashboard.products.index', compact('products', 'categories'));
+        return view('dashboard.products.index', compact('products', 'categories', 'brands'));
     }
 
     /**

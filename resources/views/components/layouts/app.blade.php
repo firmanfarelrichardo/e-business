@@ -106,7 +106,7 @@
 <body class="text-slate-800 antialiased flex flex-col min-h-screen relative overflow-x-hidden">
 
     <!-- Navbar -->
-    <div class="fixed w-full z-50 top-0 px-0 sm:top-4 sm:px-4">
+    <div class="fixed w-full z-50 top-0 px-0 sm:top-4 sm:px-4 print:hidden">
         <nav
             class="max-w-7xl mx-auto glass-panel sm:rounded-full px-6 py-3 flex justify-between items-center transition-all duration-300">
             <!-- Logo -->
@@ -204,7 +204,7 @@
 
     <!-- FOOTER SECTION with Glass Style -->
     <footer
-        class="relative z-10 bg-brand-dark border-t border-brand-primary/30 text-brand-tertiary overflow-hidden mt-auto">
+        class="relative z-10 bg-brand-dark border-t border-brand-primary/30 text-brand-tertiary overflow-hidden mt-auto print:hidden">
         <!-- Background elements for footer -->
         <div class="absolute top-0 right-1/4 w-96 h-96 bg-brand-primary/10 rounded-full blur-3xl point-events-none">
         </div>

@@ -1,4 +1,6 @@
-<x-layouts.dashboard title="Manajemen Antrean">
+@extends('components.layouts.dashboard')
+
+@section('content')
     <div class="mb-6 flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div>
             <h1 class="text-2xl font-bold text-gray-800">Manajemen Antrean Kasir</h1>
@@ -21,7 +23,7 @@
 
     <!-- Tabs -->
     <div class="flex space-x-2 border-b border-gray-200 mb-6 overflow-x-auto">
-        <a href="{{ route('dashboard.queues', ['status' => 'pending']) }}" class="px-6 py-3 text-sm font-medium border-b-2 whitespace-nowrap {{ $statusFilter === 'pending' || $statusFilter === 'active' ? 'border-brand-primary text-brand-dark' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300' }}">
+        <a href="{{ route('dashboard.queues', ['status' => 'pending']) }}" class="px-6 py-3 text-sm font-medium border-b-2 whitespace-nowrap {{ $statusFilter === 'pending' ? 'border-brand-primary text-brand-dark' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300' }}">
             Menunggu 
             @if($pendingCount > 0)
                 <span class="ml-2 inline-flex items-center justify-center px-2 py-0.5 text-xs font-bold leading-none text-white bg-red-500 rounded-full">{{ $pendingCount }}</span>
@@ -125,4 +127,4 @@
             {{ $orders->links() }}
         </div>
     @endif
-</x-layouts.dashboard>
+@endsection

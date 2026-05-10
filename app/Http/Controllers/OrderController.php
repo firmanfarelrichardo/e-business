@@ -98,10 +98,18 @@ class OrderController extends Controller
      */
     public function invoice($id)
     {
-        // Enforce user ownership to prevent unauthorized access
-        $order = Order::with('items.productBrand.product', 'items.service', 'user')
-            ->where('user_id', auth()->id())
+        if (!auth()->check()) {
+            return redirect('/login')->with('error', 'Silahkan login terlebih dahulu untuk melihat invoice.');
+        }
+
+        // Fetch the order with its related items, product, brand, service, and user
+        $order = Order::with('items.productBrand.product', 'items.productBrand.brand', 'items.service', 'user')
             ->findOrFail($id);
+
+        // Enforce user ownership for regular members to prevent unauthorized access
+        if (auth()->user()->role === 'member' && $order->user_id !== auth()->id()) {
+            abort(404);
+        }
 
         return view('invoice.show', compact('order'));
     }

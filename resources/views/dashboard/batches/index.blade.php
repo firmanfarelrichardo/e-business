@@ -97,7 +97,7 @@
         </form>
 
         <button onclick="document.getElementById('modal-batch').classList.remove('hidden')"
-            class="w-full md:w-auto bg-brand-primary hover:bg-brand-dark text-white px-5 py-2.5 rounded-xl text-sm font-medium transition shadow-sm flex items-center justify-center gap-2">
+            class="w-full md:w-auto text-black border border-gray-200 px-5 py-2.5 rounded-xl text-sm font-medium transition shadow-sm flex items-center justify-center gap-2">
             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/></svg>
             Tambah Batch Stok
         </button>
@@ -312,7 +312,7 @@
                     <button type="button" onclick="document.getElementById('modal-batch').classList.add('hidden')"
                         class="flex-1 py-2.5 border border-gray-200 text-gray-600 rounded-xl text-sm font-medium hover:bg-gray-50 transition">Batal</button>
                     <button type="submit"
-                        class="flex-1 py-2.5 bg-brand-primary hover:bg-brand-dark text-white rounded-xl text-sm font-semibold transition shadow flex items-center justify-center gap-2">
+                        class="flex-1 py-2.5 bg-brand-primary hover:bg-brand-dark text-gray-600 rounded-xl text-sm font-semibold transition shadow flex items-center justify-center gap-2">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
                         Simpan Batch
                     </button>

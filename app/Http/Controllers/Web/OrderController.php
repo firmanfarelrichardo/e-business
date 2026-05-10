@@ -35,7 +35,7 @@ class OrderController extends Controller
      */
     public function index()
     {
-        $statusFilter = request('status', 'active');
+        $statusFilter = request('status', 'pending');
         $orders       = $this->orderService->getActiveOrders($statusFilter, 20);
         $pendingCount = $this->orderService->getPendingCount();
 

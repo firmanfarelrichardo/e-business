@@ -1,7 +1,10 @@
 <x-layouts.app title="Detail Pesanan - Sinergi">
     <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 mt-4 lg:mt-8">
-        <div class="flex items-center gap-3 mb-8">
-            <a href="{{ url('/history') }}"
+        <div class="flex items-center gap-3 mb-8 print:hidden">
+            @php
+                $backUrl = (auth()->check() && auth()->user()->role !== 'member') ? url('/dashboard/queues') : url('/history');
+            @endphp
+            <a href="{{ $backUrl }}"
                 class="w-10 h-10 bg-white/50 rounded-full flex items-center justify-center hover:bg-white text-slate-600 shadow-sm transition">
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
