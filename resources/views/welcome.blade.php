@@ -167,15 +167,12 @@
                 <!-- Text Content -->
                 <div class="w-full lg:w-3/5 text-center lg:text-left mt-10 lg:mt-0">
                     <h1
-                        class="text-4xl md:text-5xl lg:text-6xl font-extrabold text-white leading-tight mb-6 tracking-tight">
-                        Solusi <span class="text-brand-secondary">ATK</span> & <br /> Layanan <span
-                            class="text-transparent bg-clip-text bg-gradient-to-r from-brand-primary to-brand-tertiary">Cetak</span>
-                        Terpadu.
+                        class="text-4xl md:text-5xl lg:text-6xl font-extrabold text-white leading-tight mb-6 tracking-tight"> <span data-scramble>Solusi </span><span data-scramble class="text-brand-secondary">ATK</span><span data-scramble> & </span><br /> <span data-scramble>Layanan </span><span data-scramble
+                            class="text-transparent bg-clip-text bg-gradient-to-r from-brand-primary to-brand-tertiary">Cetak</span> <span data-scramble>Terpadu.</span>
                     </h1>
                     <p
                         class="text-lg md:text-xl text-white/80 mb-10 max-w-2xl mx-auto lg:mx-0 leading-relaxed font-light">
-                        Platform e-Business terintegrasi untuk penuhi kebutuhan operasional kantor Anda. Kualitas
-                        premium, diproses dengan cepat & praktis.
+                        <span data-scramble>Platform e-Business terintegrasi untuk penuhi kebutuhan operasional kantor Anda. Kualitas premium, diproses dengan cepat & praktis.</span>
                     </p>
                     <div class="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
                         <a href="{{ url('/katalog') }}"
@@ -533,6 +530,36 @@
 
     <script type="module">
         import { animate, inView, stagger } from "https://esm.sh/motion";
+
+        const scrambleTargets = document.querySelectorAll('[data-scramble]');
+        const scrambleChars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+
+        const randomChar = () => scrambleChars[Math.floor(Math.random() * scrambleChars.length)];
+        const centerDelay = (index, total, step = 0.03) => {
+            const center = (total - 1) / 2;
+            return Math.abs(index - center) * step;
+        };
+
+        scrambleTargets.forEach((element) => {
+            const text = element.textContent ?? '';
+            const chars = Array.from(text);
+            element.textContent = '';
+
+            chars.forEach((char, index) => {
+                const span = document.createElement('span');
+                span.dataset.final = char;
+                span.style.display = 'inline-block';
+                span.style.opacity = '0';
+                span.textContent = char === ' ' ? '\u00A0' : randomChar();
+                element.appendChild(span);
+
+                const delay = centerDelay(index, chars.length);
+                animate(span, { opacity: [0, 1] }, { duration: 0.2, delay });
+                window.setTimeout(() => {
+                    span.textContent = char === ' ' ? '\u00A0' : char;
+                }, (delay + 0.2) * 1000);
+            });
+        });
 
         // Initial Hero Entry Animations
         animate(

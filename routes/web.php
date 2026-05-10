@@ -74,7 +74,6 @@ Route::post('/web-auth/logout', function (Illuminate\Http\Request $request) {
 // -- Catalog UI Pages -----------------------------------------------------
 Route::get('/katalog', [CatalogController::class, 'index']);
 Route::get('/jasa', [CatalogController::class, 'jasa']);
-
 Route::middleware(['auth'])->group(function () {
     Route::get('/keranjang', [CartController::class, 'index'])->name('keranjang.index');
     Route::post('/keranjang/add', [CartController::class, 'add'])->name('keranjang.add');
