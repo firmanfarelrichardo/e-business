@@ -79,6 +79,7 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/cart/add', [CartController::class, 'add'])->name('cart.add');
     Route::post('/cart/update', [CartController::class, 'update'])->name('cart.update');
     Route::post('/cart/remove', [CartController::class, 'remove'])->name('cart.remove');
+    Route::post('/cart/upload-document', [CartController::class, 'uploadDocument'])->name('cart.upload_document');
 });
 
 Route::get('/not-configured', function () {

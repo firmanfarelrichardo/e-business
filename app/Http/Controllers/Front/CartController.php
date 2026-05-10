@@ -85,10 +85,48 @@ class CartController extends Controller
         $cartKey = $request->cart_key;
 
         if (isset($cart[$cartKey])) {
+            // Delete file if exists
+            if (isset($cart[$cartKey]['document_path']) && \Illuminate\Support\Facades\Storage::exists($cart[$cartKey]['document_path'])) {
+                \Illuminate\Support\Facades\Storage::delete($cart[$cartKey]['document_path']);
+            }
             unset($cart[$cartKey]);
             session()->put('cart', $cart);
         }
 
         return back()->with('success', 'Item dihapus dari keranjang');
+    }
+
+    public function uploadDocument(Request $request)
+    {
+        $request->validate([
+            'cart_key' => 'required',
+            'document' => 'required|file|mimes:pdf,doc,docx,jpg,jpeg,png|max:10240' // max 10MB
+        ]);
+
+        $cart = session()->get('cart', []);
+        $cartKey = $request->cart_key;
+
+        if (!isset($cart[$cartKey])) {
+            return response()->json(['success' => false, 'message' => 'Item tidak ditemukan'], 404);
+        }
+
+        // Delete old file if exists
+        if (isset($cart[$cartKey]['document_path']) && \Illuminate\Support\Facades\Storage::exists($cart[$cartKey]['document_path'])) {
+            \Illuminate\Support\Facades\Storage::delete($cart[$cartKey]['document_path']);
+        }
+
+        $file = $request->file('document');
+        $filename = time() . '_' . $file->getClientOriginalName();
+        $path = $file->storeAs('documents/cart', $filename, 'public');
+
+        $cart[$cartKey]['document_path'] = $path;
+        $cart[$cartKey]['document_filename'] = $file->getClientOriginalName();
+        session()->put('cart', $cart);
+
+        return response()->json([
+            'success' => true, 
+            'path' => asset('storage/' . $path),
+            'filename' => $file->getClientOriginalName()
+        ]);
     }
 }

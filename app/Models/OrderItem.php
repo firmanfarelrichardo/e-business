@@ -20,7 +20,8 @@ class OrderItem extends Model
         'order_id',
         'product_brand_id',
         'service_id',
-        'cogs'
+        'cogs',
+        'document_path'
     ];
 
     public function order()

@@ -78,9 +78,19 @@
                                         @php
                                             $itemName = $item->product_brand_id ? $item->productBrand->product->name : $item->service->name;
                                         @endphp
-                                        <li class="flex justify-between">
-                                            <span class="text-gray-600 truncate mr-2">{{ $item->quantity }}x {{ $itemName }}</span>
-                                            <span class="text-gray-800 font-medium">Rp{{ number_format($item->subtotal_price, 0, ',', '.') }}</span>
+                                        <li class="flex flex-col mb-1 pb-1 border-b border-gray-100 last:border-0 last:mb-0 last:pb-0">
+                                            <div class="flex justify-between">
+                                                <span class="text-gray-600 truncate mr-2">{{ $item->quantity }}x {{ $itemName }}</span>
+                                                <span class="text-gray-800 font-medium">Rp{{ number_format($item->subtotal_price, 0, ',', '.') }}</span>
+                                            </div>
+                                            @if($item->document_path)
+                                                <div class="mt-1 flex items-center gap-2">
+                                                    <a href="{{ asset('storage/' . $item->document_path) }}" target="_blank" class="text-[10px] bg-brand-primary/10 text-brand-primary px-2 py-0.5 rounded font-bold hover:bg-brand-primary hover:text-white transition flex items-center gap-1">
+                                                        <svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a2 2 0 002 2h12a2 2 0 002-2v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
+                                                        LIHAT DOKUMEN
+                                                    </a>
+                                                </div>
+                                            @endif
                                         </li>
                                     @endforeach
                                 </ul>

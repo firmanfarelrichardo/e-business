@@ -54,7 +54,28 @@
                                         <span class="bg-brand-primary text-white text-[10px] font-bold px-2 py-0.5 rounded uppercase tracking-wider mb-1 inline-block">Produk</span>
                                     @endif
                                     <h4 class="font-bold text-slate-800 text-lg mb-1">{{ $item['name'] }}</h4>
-                                    <p class="text-sm text-brand-primary font-semibold">Rp {{ number_format($item['price'], 0, ',', '.') }} <span class="text-xs text-slate-400 font-normal">/ unit</span></p>
+                                    <p class="text-sm text-brand-primary font-semibold mb-2">Rp {{ number_format($item['price'], 0, ',', '.') }} <span class="text-xs text-slate-400 font-normal">/ unit</span></p>
+
+                                    @if($item['type'] === 'service')
+                                        <div class="mt-3 p-3 bg-white/40 rounded-xl border border-white/60">
+                                            <label class="block text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-2">Dokumen Cetak (PDF/DOC/IMG)</label>
+                                            <div class="flex items-center gap-3">
+                                                <input type="file" 
+                                                       id="doc-{{ $key }}" 
+                                                       class="hidden" 
+                                                       onchange="uploadDocument('{{ $key }}')">
+                                                <button type="button" 
+                                                        onclick="document.getElementById('doc-{{ $key }}').click()"
+                                                        class="bg-white px-3 py-1.5 rounded-lg border border-slate-200 text-xs font-bold text-slate-600 hover:bg-slate-50 transition shadow-sm flex items-center gap-2">
+                                                    <svg class="w-3.5 h-3.5 text-brand-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a2 2 0 002 2h12a2 2 0 002-2v-1m-4-8l-4-4m0 0L8 8m4-4v12"></path></svg>
+                                                    {{ isset($item['document_path']) ? 'Ganti File' : 'Pilih File' }}
+                                                </button>
+                                                <div id="status-{{ $key }}" class="text-[10px] font-medium text-slate-500 truncate max-w-[150px]">
+                                                    {{ $item['document_filename'] ?? 'Belum ada file' }}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    @endif
                                 </div>
                             </div>
                             <div class="col-span-1 md:col-span-3 flex items-center justify-between md:justify-center mt-4 md:mt-0">
@@ -144,4 +165,40 @@
             
         </div>
     </div>
+
+    <script>
+        function uploadDocument(cartKey) {
+            const fileInput = document.getElementById('doc-' + cartKey);
+            const statusDiv = document.getElementById('status-' + cartKey);
+            
+            if (!fileInput.files.length) return;
+            
+            const formData = new FormData();
+            formData.append('cart_key', cartKey);
+            formData.append('document', fileInput.files[0]);
+            formData.append('_token', '{{ csrf_token() }}');
+            
+            statusDiv.innerHTML = '<span class="text-brand-primary animate-pulse">Mengupload...</span>';
+            
+            fetch('{{ url("/cart/upload-document") }}', {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    statusDiv.innerHTML = '<span class="text-green-600 font-bold">✓ ' + data.filename + '</span>';
+                } else {
+                    statusDiv.innerHTML = '<span class="text-red-500">' + (data.message || 'Gagal upload') + '</span>';
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                statusDiv.innerHTML = '<span class="text-red-500">Error sistem</span>';
+            });
+        }
+    </script>
 </x-layouts.app>

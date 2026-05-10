@@ -175,6 +175,7 @@ class OrderService
                     'price_per_unit'   => $pricePerUnit,
                     'subtotal_price'   => $subtotal,
                     'note'             => $item['note'] ?? null,
+                    'document_path'    => $item['document_path'] ?? null,
                 ];
             }
 

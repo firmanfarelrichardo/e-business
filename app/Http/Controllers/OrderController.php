@@ -45,7 +45,8 @@ class OrderController extends Controller
                 'product_brand_id' => $item['type'] === 'product' ? $item['id'] : null,
                 'service_id' => $item['type'] === 'service' ? $item['id'] : null,
                 'quantity' => $item['quantity'],
-                'note' => null,
+                'note' => $item['note'] ?? null,
+                'document_path' => $item['document_path'] ?? null,
             ];
         }
 
