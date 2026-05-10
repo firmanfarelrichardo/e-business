@@ -75,11 +75,10 @@ Route::post('/web-auth/logout', function (Illuminate\Http\Request $request) {
 Route::get('/katalog', [CatalogController::class, 'index']);
 Route::get('/jasa', [CatalogController::class, 'jasa']);
 Route::middleware(['auth'])->group(function () {
-    Route::get('/keranjang', [CartController::class, 'index'])->name('keranjang.index');
-    Route::post('/keranjang/add', [CartController::class, 'add'])->name('keranjang.add');
-    Route::put('/keranjang/update/{id}', [CartController::class, 'updateQuantity'])->name('keranjang.update');
-    Route::delete('/keranjang/remove/{id}', [CartController::class, 'remove'])->name('keranjang.remove');
-    Route::post('/keranjang/checkout', [CartController::class, 'checkout'])->name('keranjang.checkout');
+    Route::get('/keranjang', [CatalogController::class, 'keranjang'])->name('keranjang');
+    Route::post('/cart/add', [CartController::class, 'add'])->name('cart.add');
+    Route::post('/cart/update', [CartController::class, 'update'])->name('cart.update');
+    Route::post('/cart/remove', [CartController::class, 'remove'])->name('cart.remove');
 });
 
 Route::get('/not-configured', function () {
