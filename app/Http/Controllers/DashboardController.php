@@ -4,12 +4,15 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 use App\Models\Order;
 use App\Models\Product;
 use App\Models\Service;
 use App\Models\Expense;
 use App\Models\User;
 use App\Models\ProductBrand;
+use App\Models\Brand;
 use Carbon\Carbon;
 
 class DashboardController extends Controller
@@ -21,11 +24,11 @@ class DashboardController extends Controller
 
     public function index()
     {
-        if (!auth()->check()) {
+        if (!Auth::check()) {
             return redirect('/login');
         }
 
-        if (auth()->user()->role === 'member') {
+        if (Auth::user()->role === 'member') {
             return redirect('/katalog');
         }
 
@@ -49,11 +52,16 @@ class DashboardController extends Controller
 
     public function profile()
     {
-        if (!auth()->check()) {
+        if (!Auth::check()) {
             return redirect('/login');
         }
 
-        $user = auth()->user();
+        /** @var \App\Models\User|null $user */
+        $user = Auth::user();
+
+        if (!$user) {
+            return response()->json(['ok' => false], 401);
+        }
         $history = collect();
 
         if ($user->role === 'member') {
@@ -67,7 +75,7 @@ class DashboardController extends Controller
 
     public function updatePhoto(Request $request)
     {
-        if (!auth()->check()) {
+        if (!Auth::check()) {
             return response()->json(['ok' => false], 401);
         }
 
@@ -75,11 +83,11 @@ class DashboardController extends Controller
             'photo' => 'required|image|mimes:jpeg,png,jpg,gif|max:5120',
         ]);
 
-        $user = auth()->user();
+        $user = Auth::user();
 
         if ($request->file('photo')) {
             $path = $request->file('photo')->store('profiles', 'public');
-            $user->update(['profile' => $path]);
+            \App\Models\User::whereKey($user->id)->update(['profile' => $path]);
         }
 
         return redirect()->back();
@@ -89,19 +97,20 @@ class DashboardController extends Controller
 
     public function products()
     {
-        if (!auth()->check() || auth()->user()->role === 'member') {
+        if (!Auth::check() || Auth::user()->role === 'member') {
             return redirect('/');
         }
 
         $products = Product::with(['category', 'brands.batches', 'brands.brand'])->latest()->get();
         $categories = \App\Models\ProductCategory::orderBy('name')->get();
+        $brands = Brand::orderBy('name')->get();
 
-        return view('dashboard.products.index', compact('products', 'categories'));
+        return view('dashboard.products.index', compact('products', 'categories', 'brands'));
     }
 
     public function storeProduct(Request $request)
     {
-        if (auth()->user()->role === 'member')
+        if (Auth::user()->role === 'member')
             abort(403);
 
         $data = $request->validate([
@@ -110,6 +119,10 @@ class DashboardController extends Controller
             'description' => 'nullable|string',
             'attachments' => 'nullable|array',
             'attachments.*' => 'image|mimes:jpeg,png,jpg,webp|max:4096',
+            'brand_id' => 'nullable|exists:brands,id',
+            'brand_name' => 'nullable|string|max:50',
+            'unit' => 'nullable|string|max:100',
+            'selling_price' => 'nullable|numeric|min:0',
         ]);
 
         $paths = [];
@@ -119,19 +132,41 @@ class DashboardController extends Controller
             }
         }
 
-        Product::create([
+        $product = Product::create([
             'name' => $data['name'],
             'category_id' => $data['category_id'],
             'description' => $data['description'] ?? null,
             'attachments' => !empty($paths) ? $paths : null,
         ]);
 
+        $brandName = trim($data['brand_name'] ?? '');
+        $brandId = $data['brand_id'] ?? null;
+        if ($brandName !== '' || $brandId) {
+            if (empty($data['unit']) || (!isset($data['selling_price']) || $data['selling_price'] === '')) {
+                return redirect()->back()->withErrors([
+                    'unit' => 'Unit wajib diisi saat menambahkan varian brand.',
+                    'selling_price' => 'Harga jual wajib diisi saat menambahkan varian brand.'
+                ])->withInput();
+            }
+
+            $brand = $brandName !== ''
+                ? Brand::firstOrCreate(['name' => $brandName], ['description' => null])
+                : Brand::findOrFail($brandId);
+
+            ProductBrand::create([
+                'unit' => $data['unit'],
+                'selling_price' => $data['selling_price'],
+                'product_id' => $product->id,
+                'brand_id' => $brand->id,
+            ]);
+        }
+
         return redirect('/dashboard/products')->with('success', 'Produk berhasil ditambahkan.');
     }
 
     public function updateProduct(Request $request, string $id)
     {
-        if (auth()->user()->role === 'member')
+        if (Auth::user()->role === 'member')
             abort(403);
 
         $product = Product::findOrFail($id);
@@ -142,6 +177,10 @@ class DashboardController extends Controller
             'attachments' => 'nullable|array',
             'attachments.*' => 'image|mimes:jpeg,png,jpg,webp|max:4096',
             'remove_attachments' => 'nullable|array',
+            'brand_id' => 'nullable|exists:brands,id',
+            'brand_name' => 'nullable|string|max:50',
+            'unit' => 'nullable|string|max:100',
+            'selling_price' => 'nullable|numeric|min:0',
         ]);
 
         // Start with existing attachments
@@ -169,12 +208,42 @@ class DashboardController extends Controller
             'attachments' => !empty($existing) ? $existing : null,
         ]);
 
+        // Handle optional brand addition (same logic as storeProduct)
+        $brandName = trim($data['brand_name'] ?? '');
+        $brandId = $data['brand_id'] ?? null;
+        if ($brandName !== '' || $brandId) {
+            if (empty($data['unit']) || (!isset($data['selling_price']) || $data['selling_price'] === '')) {
+                return redirect()->back()->withErrors([
+                    'unit' => 'Unit wajib diisi saat menambahkan varian brand.',
+                    'selling_price' => 'Harga jual wajib diisi saat menambahkan varian brand.',
+                ])->withInput();
+            }
+
+            $brand = $brandName !== ''
+                ? Brand::firstOrCreate(['name' => $brandName], ['description' => null])
+                : Brand::findOrFail($brandId);
+
+            // Only add if this brand isn't already linked to this product
+            $alreadyLinked = ProductBrand::where('product_id', $product->id)
+                ->where('brand_id', $brand->id)
+                ->exists();
+
+            if (!$alreadyLinked) {
+                ProductBrand::create([
+                    'unit' => $data['unit'],
+                    'selling_price' => $data['selling_price'],
+                    'product_id' => $product->id,
+                    'brand_id' => $brand->id,
+                ]);
+            }
+        }
+
         return redirect('/dashboard/products')->with('success', 'Produk berhasil diupdate.');
     }
 
     public function deleteProduct(string $id)
     {
-        if (auth()->user()->role === 'member')
+        if (Auth::user()->role === 'member')
             abort(403);
 
         $product = Product::findOrFail($id);
@@ -194,7 +263,7 @@ class DashboardController extends Controller
 
     public function updateProductBrandPrice(Request $request, string $id)
     {
-        if (!in_array(auth()->user()->role, ['owner', 'employee']))
+        if (!in_array(Auth::user()->role, ['owner', 'employee']))
             abort(403);
 
         $data = $request->validate([
@@ -211,7 +280,7 @@ class DashboardController extends Controller
 
     public function services()
     {
-        if (!auth()->check() || auth()->user()->role === 'member') {
+        if (!Auth::check() || Auth::user()->role === 'member') {
             return redirect('/');
         }
 
@@ -221,7 +290,7 @@ class DashboardController extends Controller
 
     public function storeService(Request $request)
     {
-        if (auth()->user()->role === 'member')
+        if (Auth::user()->role === 'member')
             abort(403);
 
         $data = $request->validate([
@@ -243,7 +312,7 @@ class DashboardController extends Controller
             'name' => $data['name'],
             'description' => $data['description'] ?? null,
             'piece_price' => $data['piece_price'],
-            'created_by' => auth()->id(),
+            'created_by' => Auth::id(),
             'attachments' => !empty($paths) ? $paths : null,
         ]);
 
@@ -252,7 +321,7 @@ class DashboardController extends Controller
 
     public function updateService(Request $request, string $id)
     {
-        if (auth()->user()->role === 'member')
+        if (Auth::user()->role === 'member')
             abort(403);
 
         $service = Service::findOrFail($id);
@@ -292,7 +361,7 @@ class DashboardController extends Controller
 
     public function deleteService(string $id)
     {
-        if (auth()->user()->role === 'member')
+        if (Auth::user()->role === 'member')
             abort(403);
 
         $service = Service::findOrFail($id);
@@ -311,7 +380,7 @@ class DashboardController extends Controller
 
     public function users()
     {
-        if (!auth()->check() || auth()->user()->role !== 'owner') {
+        if (!Auth::check() || Auth::user()->role !== 'owner') {
             abort(403, 'Akses ditolak. Fitur ini khusus Owner.');
         }
 
@@ -321,7 +390,7 @@ class DashboardController extends Controller
 
     public function storeUser(Request $request)
     {
-        if (auth()->user()->role !== 'owner')
+        if (Auth::user()->role !== 'owner')
             abort(403);
 
         $data = $request->validate([
@@ -336,7 +405,7 @@ class DashboardController extends Controller
         \App\Models\User::create([
             ...$data,
             'password' => bcrypt($data['password']),
-            'created_by' => auth()->id(),
+            'created_by' => Auth::id(),
         ]);
 
         return redirect('/dashboard/users')->with('success', 'User berhasil ditambahkan.');
@@ -344,7 +413,7 @@ class DashboardController extends Controller
 
     public function updateUser(Request $request, string $id)
     {
-        if (auth()->user()->role !== 'owner')
+        if (Auth::user()->role !== 'owner')
             abort(403);
 
         $user = \App\Models\User::findOrFail($id);
@@ -365,7 +434,7 @@ class DashboardController extends Controller
 
     public function deleteUser(string $id)
     {
-        if (auth()->user()->role !== 'owner')
+        if (Auth::user()->role !== 'owner')
             abort(403);
         \App\Models\User::findOrFail($id)->delete();
         return redirect('/dashboard/users')->with('success', 'User berhasil dihapus.');
@@ -375,7 +444,7 @@ class DashboardController extends Controller
 
     public function expenses()
     {
-        if (!auth()->check() || auth()->user()->role === 'member') {
+        if (!Auth::check() || Auth::user()->role === 'member') {
             abort(403, 'Akses ditolak.');
         }
 
@@ -389,7 +458,7 @@ class DashboardController extends Controller
     public function storeExpense(Request $request)
     {
         // Only owners may record new expenses
-        if (auth()->user()->role !== 'owner')
+        if (Auth::user()->role !== 'owner')
             abort(403);
 
         $data = $request->validate([
@@ -400,13 +469,13 @@ class DashboardController extends Controller
             'items.*.purchase_price' => 'required|numeric|min:0',
         ]);
 
-        \DB::transaction(function () use ($data) {
+        DB::transaction(function () use ($data) {
             $total = collect($data['items'])->sum(fn($i) => $i['quantity'] * $i['purchase_price']);
 
             $expense = Expense::create([
                 'total_amount' => $total,
                 'note' => $data['note'] ?? null,
-                'created_by' => auth()->id(),
+                'created_by' => Auth::id(),
                 'created_at' => now(),
             ]);
 
@@ -431,7 +500,7 @@ class DashboardController extends Controller
                     'current_stock' => $item['quantity'],
                     'purchase_price' => $item['purchase_price'],
                     'is_active' => true,
-                    'created_by' => auth()->id(),
+                    'created_by' => Auth::id(),
                     'created_at' => now(),
                 ]);
 
@@ -451,7 +520,7 @@ class DashboardController extends Controller
 
     public function queues()
     {
-        if (!auth()->check() || auth()->user()->role === 'member') {
+        if (!Auth::check() || Auth::user()->role === 'member') {
             abort(403, 'Akses ditolak.');
         }
 
@@ -480,7 +549,7 @@ class DashboardController extends Controller
 
     public function updateOrderStatus(Request $request, string $id)
     {
-        if (!auth()->check() || auth()->user()->role === 'member') {
+        if (!Auth::check() || Auth::user()->role === 'member') {
             abort(403);
         }
 
@@ -497,7 +566,7 @@ class DashboardController extends Controller
 
         // Assign current staff as handler if not already set
         if (is_null($order->employee_id)) {
-            $update['employee_id'] = auth()->id();
+            $update['employee_id'] = Auth::id();
         }
 
         $order->update($update);
