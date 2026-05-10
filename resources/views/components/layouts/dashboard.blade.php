@@ -150,33 +150,39 @@
             width: 100%;
         }
 
+        /* Mobile Overlay Default (Hidden on Desktop) */
+        .mobile-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 35;
+            backdrop-filter: blur(2px);
+        }
+
+        .mobile-overlay.active {
+            display: block;
+        }
+
+        /* Responsive */
         @media (max-width: 1024px) {
             .dashboard-layout {
                 grid-template-columns: 1fr;
             }
 
             .sidebar {
+                width: 280px;
                 transform: translateX(-100%);
                 position: fixed;
-                transition: transform 0.3s ease;
+                transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
                 box-shadow: 4px 0 24px rgba(0, 0, 0, 0.15);
+                left: 0;
+                top: 0;
+                bottom: 0;
             }
 
             .sidebar.mobile-open {
                 transform: translateX(0);
-            }
-
-            .mobile-overlay {
-                display: none;
-                position: fixed;
-                inset: 0;
-                background: rgba(0, 0, 0, 0.5);
-                z-index: 35;
-                backdrop-filter: blur(2px);
-            }
-
-            .mobile-overlay.active {
-                display: block;
             }
         }
     </style>
