@@ -23,7 +23,7 @@
                             <h4 class="font-bold text-slate-800 text-lg md:text-base">{{ $order->order_number }}</h4>
                         </div>
                         <div class="col-span-1 md:col-span-3 text-sm text-slate-600">
-                            {{ $order->created_at->format('d M Y, H:i') }}
+                            {{ $order->created_at ? $order->created_at->format('d M Y, H:i') : 'Tanggal tidak tersedia' }}
                         </div>
                         <div class="col-span-1 md:col-span-2 font-bold text-brand-dark">
                             Rp {{ number_format($order->total_price, 0, ',', '.') }}

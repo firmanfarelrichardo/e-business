@@ -17,7 +17,7 @@ class UserSeeder extends Seeder
     public function run(): void
     {
         $faker = Faker::create('id_ID');
-        $password = Hash::make('password123'); // Default password for testing
+        $password = Hash::make('password'); // Default password for testing
 
         // 1. Create System Owner (Admin)
         User::create([
@@ -43,11 +43,11 @@ class UserSeeder extends Seeder
 
         User::create([
             'id' => (string) Str::uuid(),
-            'name' => 'Kasir Malam',
-            'username' => 'kasir2',
-            'email' => 'kasir2@sinergi.com',
+            'name' => 'Elthon Jhon Kevin',
+            'username' => 'elthonJhon_',
+            'email' => 'elthonjhonkevin@gmail.com',
             'password' => $password,
-            'role' => 'employee',
+            'role' => 'member',
             'email_verified_at' => now(),
         ]);
 
