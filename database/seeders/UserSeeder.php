@@ -5,52 +5,69 @@ namespace Database\Seeders;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Hash;
 use App\Models\User;
+use Faker\Factory as Faker;
+use Illuminate\Support\Str;
 
 class UserSeeder extends Seeder
 {
     /**
      * Run the database seeds.
-     *
-     * @return void
+     * Generates a realistic set of users for E-Business hierarchy.
      */
-    public function run()
+    public function run(): void
     {
-        // 1. Owner
-        User::updateOrCreate(
-            ['email' => 'owner@sinergi.com'], // Patokan agar tidak dobel
-            [
-                'name' => 'Pemilik Sinergi',
-                'username' => 'owner',
-                'password' => Hash::make('password123'),
-                'role' => 'owner',
-                'is_active' => true,
-                'address' => 'Gedung Pusat Sinergi',
-            ]
-        );
+        $faker = Faker::create('id_ID');
+        $password = Hash::make('password123'); // Default password for testing
 
-        // 2. Employee (Kasir/Staff)
-        User::updateOrCreate(
-            ['email' => 'employee@sinergi.com'], // Patokan agar tidak dobel
-            [
-                'name' => 'Kasir Utama',
-                'username' => 'employee',
-                'password' => Hash::make('password123'),
-                'role' => 'employee',
-                'is_active' => true,
-                'address' => 'Cabang Sinergi Sudirman',
-            ]
-        );
+        // 1. Create System Owner (Admin)
+        User::create([
+            'id' => (string) Str::uuid(),
+            'name' => 'Owner Sinergi',
+            'username' => 'admin',
+            'email' => 'admin@sinergi.com',
+            'password' => $password,
+            'role' => 'owner',
+            'email_verified_at' => now(),
+        ]);
 
-        // 3. Member (Pelanggan)
-        User::updateOrCreate(
-            ['email' => 'member@sinergi.com'], // Patokan agar tidak dobel
-            [
-                'name' => 'Pelanggan Setia',
-                'username' => 'member',
-                'password' => Hash::make('password123'),
+        // 2. Create Employees (Cashiers)
+        User::create([
+            'id' => (string) Str::uuid(),
+            'name' => 'Kasir Utama',
+            'username' => 'kasir1',
+            'email' => 'kasir1@sinergi.com',
+            'password' => $password,
+            'role' => 'employee',
+            'email_verified_at' => now(),
+        ]);
+
+        User::create([
+            'id' => (string) Str::uuid(),
+            'name' => 'Kasir Malam',
+            'username' => 'kasir2',
+            'email' => 'kasir2@sinergi.com',
+            'password' => $password,
+            'role' => 'employee',
+            'email_verified_at' => now(),
+        ]);
+
+        // 3. Generate 50+ Real-world Customers
+        $customers = [];
+        for ($i = 0; $i < 55; $i++) {
+            $customers[] = [
+                'id' => (string) Str::uuid(),
+                'name' => $faker->name(),
+                'username' => $faker->unique()->userName(),
+                'email' => $faker->unique()->safeEmail(),
+                'password' => $password,
                 'role' => 'member',
-                'is_active' => true,
-            ]
-        );
+                'email_verified_at' => $faker->optional(0.8)->dateTimeThisYear(),
+                'created_at' => $faker->dateTimeBetween('-6 months', 'now'),
+                'updated_at' => now(),
+            ];
+        }
+
+        // Bulk insert for performance
+        User::insert($customers);
     }
 }

@@ -1,38 +1,51 @@
-# Rencana Implementasi: COGS / HPP Snapshotting
+# Rencana Implementasi: Master Database Seeder (Real-World Simulation)
 
-Fitur ini akan mengamankan laporan laba historis (*Data Immutability*) dengan menyimpan nilai Harga Pokok Penjualan (HPP/COGS) ke dalam setiap item pesanan pada saat pesanan diselesaikan, sehingga kebal terhadap perubahan harga modal di masa depan.
+Fitur ini akan menghasilkan *Mock Data* berukuran besar yang sangat realistis untuk menguji ketahanan antarmuka dasbor, akurasi pelaporan HPP (COGS), dan algoritma *Exact FIFO* pada lingkungan yang menyerupai *Production*.
 
 ## User Review Required
 
-> [!IMPORTANT]
-> **Metode Perhitungan COGS: WAC vs Exact FIFO**
-> Anda menginstruksikan untuk mengambil nilai WAC terbaru. Namun, karena sistem pemotongan stok Anda di `OrderService` sudah menggunakan **Metode FIFO (First-In, First-Out) yang sangat presisi**, mengambil nilai WAC (rata-rata) justru akan mengurangi keakuratan laporan laba.
-> **Usulan Saya**: Di dalam loop pemotongan stok FIFO, saya akan langsung menghitung **Exact COGS** berdasarkan `purchase_price` asli dari masing-masing *Batch* yang terpotong. Ini memberikan angka HPP yang 100% akurat sesuai fisik barang yang keluar.
-> Apakah Anda setuju menggunakan Exact FIFO Cost untuk kolom `cogs` ini?
+> [!WARNING]
+> **Penataan Ulang File Seeder Lama**
+> Pada struktur saat ini, sistem Anda memiliki `CategorySeeder`, `BrandSeeder`, dan `ProductSeeder` yang terpisah. Untuk menyederhanakan *call sequence* dan memastikan relasi produk benar-benar masuk akal di dunia nyata (Kertas HVS hanya untuk merk Sinar Dunia/PaperOne), saya mengusulkan untuk menggabungkan seeder katalog ini ke dalam satu **`CatalogSeeder.php`** terpusat. Seeder lama tidak akan dipanggil lagi di `DatabaseSeeder`. Apakah Anda setuju dengan pemadatan ini?
 
 ## Proposed Changes
 
-### 1. Database Schema Update
+### 1. Seeder Orchestrator
 
-#### [NEW] database/migrations/..._add_cogs_to_order_items_table.php
-Menambahkan kolom baru:
-- `cogs` (Decimal `15, 0`, `nullable`, `default(0)`): Menyimpan total Harga Pokok Penjualan untuk baris item tersebut (bukan harga satuan, melainkan total HPP dari `qty`).
+#### [MODIFY] database/seeders/DatabaseSeeder.php
+Mengatur urutan pemanggilan (*Call Sequence*) yang sangat ketat untuk mencegah *Foreign Key Constraint Error*:
+1. `UserSeeder` (Tabel terluar)
+2. `CatalogSeeder` (Bergantung pada User untuk `created_by`, mengisi Kategori, Brand, Produk, ProductBrand/Varian, dan Layanan Jasa)
+3. `BatchSeeder` (Bergantung pada ProductBrand, mengisi riwayat stok masuk & WAC awal)
+4. `OrderSeeder` (Bergantung pada User, Employee, Batch, dan ProductBrand untuk membuat transaksi historis)
 
-### 2. Model Update
+### 2. Individual Seeders (The Data Generators)
 
-#### [MODIFY] app/Models/OrderItem.php
-- Menambahkan `cogs` ke dalam *array* `$fillable` agar bisa disimpan secara massal/langsung.
+#### [NEW] database/seeders/UserSeeder.php
+- **Static Data**: 1 Admin (owner), 2 Kasir (employee) dengan *password* statis agar Anda mudah melakukan *login testing*.
+- **Faker Data**: `for` *loop* menghasilkan 50+ *users* berstatus `member`/`customer` dengan nama khas Indonesia.
 
-### 3. Business Logic (COGS Snapshot)
+#### [NEW] database/seeders/CatalogSeeder.php
+- Menggunakan *Array List* manual.
+- **Kategori**: Kertas, Alat Tulis, Peralatan Kantor, Tinta/Toner, dll.
+- **Brand**: Sinar Dunia, Joyko, Kenko, dll.
+- **Products & ProductBrands**: Akan dibuat minimal 50 kombinasi rasional (contoh: "Kertas HVS A4 70gsm Sinar Dunia").
+- **Services**: Fotocopy (A4, F4, Warna), Jilid, Laminating.
 
-#### [MODIFY] app/Services/OrderService.php
-- **`deductStock()`**: Saya akan memodifikasi metode ini agar tidak hanya memotong stok, tetapi juga mengembalikan/menyimpan nilai COGS.
-  - Untuk Produk (ATK): COGS akan diakumulasi di dalam iterasi FIFO (`$quantityToDeduct * $batch->purchase_price`). Setelah iterasi *batch* selesai untuk item tersebut, nilai COGS disimpan permanen ke `$item->update(['cogs' => $totalCogs])`.
-  - Untuk Jasa (Service): Sistem akan otomatis menyetel `cogs` = 0 (karena modul layanan saat ini tidak memiliki field modal/HPP khusus).
-- **Data Immutability Guarantee**: Saya akan menambahkan blok *inline comment* berstandar industri yang menegaskan bahwa *field* `cogs` ini terkunci secara logika bisnis setelah tercatat.
+#### [NEW] database/seeders/BatchSeeder.php
+- **CRITICAL**: Mengiterasi setiap `ProductBrand`.
+- Untuk setiap produk, sistem akan melahirkan 3-5 *Batch* masuk dalam rentang tanggal acak 6 bulan terakhir.
+- Harga beli (`purchase_price`) berfluktuasi secara *random* ±10% dari harga dasar untuk mensimulasikan inflasi harga pemasok dunia nyata.
+- Kondisi stok akan direkayasa: Beberapa batch dibuat habis (0), lainnya sebagian atau utuh.
+- Memanggil `$productBrand->recalculateWAC()` di akhir iterasi produk untuk menyinkronkan data harga.
+
+#### [NEW] database/seeders/OrderSeeder.php
+- Menghasilkan 500+ pesanan *Completed* dalam 6 bulan terakhir.
+- 10 pesanan *Pending* dan 5 pesanan *Processing* dengan `created_at` hari ini khusus untuk mengetes UI Dasbor Antrean Kasir Anda.
+- **Simulasi FIFO & COGS**: Di dalam pembuatan `order_items`, seeder akan merangkai `cogs` yang rasional berdasarkan *purchase_price* rata-rata atau acak mendekati WAC, sehingga laporan laba Anda langsung terisi angka riil.
 
 ## Verification Plan
-
-1. **Jalankan Migrasi**: `php artisan migrate`.
-2. **Pengujian Kasir**: Membuat pesanan baru, memprosesnya hingga `completed`.
-3. **Pengecekan Database**: Memverifikasi tabel `order_items` bahwa kolom `cogs` telah terisi dengan angka HPP yang tepat sesuai dengan *batch* yang terpotong, dan untuk Jasa bernilai 0.
+1. **Refresh Database**: Saya akan memberikan perintah `php artisan migrate:fresh --seed` untuk menghapus dan membangun ulang seluruh struktur beserta datanya.
+2. **Uji Login**: Memastikan Admin dapat login.
+3. **Uji Dasbor Antrean**: Memeriksa halaman antrean apakah 15 pesanan hari ini langsung muncul di kolom *Menunggu* dan *Diproses*.
+4. **Uji COGS**: Memeriksa `order_items` di DB untuk memastikan kolom `cogs` telah terisi dengan benar.
