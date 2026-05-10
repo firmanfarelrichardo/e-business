@@ -131,7 +131,7 @@
                 <a href="{{ url('/jasa') }}"
                     class="text-slate-700 hover:text-brand-primary text-sm font-semibold transition duration-200">Jasa
                     Cetak</a>
-                <a href="{{ url('/not-configured') }}"
+                <a href="{{ url('/history') }}"
                     class="text-slate-700 hover:text-brand-primary text-sm font-semibold transition duration-200">Lacak
                     Pesanan</a>
             </div>
@@ -147,8 +147,13 @@
                         </path>
                     </svg>
                     <!-- Cart Badge -->
-                    <span
-                        class="absolute top-0 right-0 bg-brand-primary text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full border border-white">0</span>
+                    @php
+                        $cartCount = collect(session('cart', []))->sum('quantity');
+                    @endphp
+                    @if($cartCount > 0)
+                        <span
+                            class="absolute top-0 right-0 bg-brand-primary text-white text-[10px] font-bold px-1.5 py-0.5 rounded-full border border-white">{{ $cartCount > 99 ? '99+' : $cartCount }}</span>
+                    @endif
                 </a>
 
                 @auth
@@ -239,8 +244,8 @@
                 <div>
                     <h4 class="text-white font-bold mb-4 uppercase tracking-widest text-xs">Bantuan</h4>
                     <ul class="space-y-2 font-light text-sm">
-                        <li><a href="{{ url('/not-configured') }}"
-                                class="text-white/60 hover:text-white transition">Lacak Pengiriman</a></li>
+                        <li><a href="{{ url('/history') }}" class="text-white/60 hover:text-white transition">Lacak
+                                Pengiriman</a></li>
                         <li><a href="{{ url('/not-configured') }}"
                                 class="text-white/60 hover:text-white transition">Syarat & Ketentuan</a></li>
                     </ul>

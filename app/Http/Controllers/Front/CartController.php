@@ -3,97 +3,92 @@
 namespace App\Http\Controllers\Front;
 
 use App\Http\Controllers\Controller;
-use App\Services\CartService;
-use App\Services\OrderService;
 use Illuminate\Http\Request;
-use Exception;
+use App\Models\ProductBrand;
+use App\Models\Service;
 
 class CartController extends Controller
 {
-    protected CartService $cartService;
-    protected OrderService $orderService;
-
-    public function __construct(CartService $cartService, OrderService $orderService)
-    {
-        $this->cartService = $cartService;
-        $this->orderService = $orderService;
-    }
-
-    public function index(Request $request)
-    {
-        $user = auth()->user();
-        $cart = $this->cartService->getCart($user->id);
-        
-        $totalPrice = 0;
-        if ($cart) {
-            foreach ($cart->items as $item) {
-                if ($item->productBrand) {
-                    $totalPrice += $item->productBrand->selling_price * $item->quantity;
-                } elseif ($item->service) {
-                    $totalPrice += $item->service->piece_price * $item->quantity;
-                }
-            }
-        }
-
-        return view('keranjang.index', compact('cart', 'totalPrice'));
-    }
-
     public function add(Request $request)
     {
         $request->validate([
-            'product_brand_id' => 'nullable|uuid|exists:product_brands,id',
-            'service_id'       => 'nullable|uuid|exists:services,id',
-            'quantity'         => 'required|integer|min:1',
-            'note'             => 'nullable|string'
+            'type' => 'required|in:product,service',
+            'id' => 'required',
+            'quantity' => 'required|integer|min:1'
         ]);
 
-        if (!$request->product_brand_id && !$request->service_id) {
-            return redirect()->back()->with('error', 'Item tidak valid.');
+        $cart = session()->get('cart', []);
+
+        $type = $request->type;
+        $id = $request->id;
+        $qty = $request->quantity;
+
+        // Bikin unique key utk item
+        $cartKey = $type . '_' . $id;
+
+        if (isset($cart[$cartKey])) {
+            $cart[$cartKey]['quantity'] += $qty;
+        } else {
+            if ($type === 'product') {
+                $item = ProductBrand::with(['product', 'brand'])->find($id);
+                if (!$item)
+                    return back()->with('error', 'Produk tidak ditemukan');
+
+                $cart[$cartKey] = [
+                    'type' => 'product',
+                    'id' => $id,
+                    'name' => ($item->product->name ?? 'Unknown') . ' (' . ($item->brand->name ?? 'Unknown') . ')',
+                    'price' => $item->selling_price,
+                    'quantity' => $qty,
+                    'image' => (isset($item->product->attachments) && count($item->product->attachments) > 0) ? asset('storage/' . $item->product->attachments[0]) : null,
+                ];
+            } else {
+                $item = Service::find($id);
+                if (!$item)
+                    return back()->with('error', 'Jasa tidak ditemukan');
+
+                $cart[$cartKey] = [
+                    'type' => 'service',
+                    'id' => $id,
+                    'name' => '[JASA] ' . $item->name,
+                    'price' => $item->piece_price,
+                    'quantity' => $qty,
+                    'image' => (isset($item->attachments) && count($item->attachments) > 0) ? asset('storage/' . $item->attachments[0]) : null,
+                ];
+            }
         }
 
-        try {
-            $user = auth()->user();
-            $this->cartService->addToCart($user->id, $request->only('product_brand_id', 'service_id', 'quantity', 'note'));
-            
-            return redirect()->route('keranjang.index')->with('success', 'Item berhasil ditambahkan ke keranjang.');
-        } catch (Exception $e) {
-            return redirect()->back()->with('error', $e->getMessage());
-        }
+        session()->put('cart', $cart);
+        return back()->with('success', 'Berhasil ditambahkan ke keranjang');
     }
 
-    public function updateQuantity(Request $request, string $id)
+    public function update(Request $request)
     {
-        $request->validate([
-            'quantity' => 'required|integer|min:0'
-        ]);
+        $cart = session()->get('cart', []);
+        $cartKey = $request->cart_key;
 
-        try {
-            $this->cartService->updateItemQuantity($id, $request->quantity);
-            return redirect()->route('keranjang.index')->with('success', 'Kuantitas berhasil diperbarui.');
-        } catch (Exception $e) {
-            return redirect()->back()->with('error', $e->getMessage());
+        if (isset($cart[$cartKey])) {
+            if ($request->action == 'increase') {
+                $cart[$cartKey]['quantity']++;
+            } elseif ($request->action == 'decrease' && $cart[$cartKey]['quantity'] > 1) {
+                $cart[$cartKey]['quantity']--;
+            }
+            session()->put('cart', $cart);
         }
+
+        return back();
     }
 
-    public function remove(string $id)
+    public function remove(Request $request)
     {
-        try {
-            $this->cartService->removeItem($id);
-            return redirect()->route('keranjang.index')->with('success', 'Item berhasil dihapus.');
-        } catch (Exception $e) {
-            return redirect()->back()->with('error', $e->getMessage());
-        }
-    }
+        $cart = session()->get('cart', []);
+        $cartKey = $request->cart_key;
 
-    public function checkout()
-    {
-        try {
-            $user = auth()->user();
-            $order = $this->orderService->checkoutCart($user);
-            
-            return redirect()->route('invoice', $order->id)->with('success', 'Pesanan berhasil dibuat!');
-        } catch (Exception $e) {
-            return redirect()->back()->with('error', $e->getMessage());
+        if (isset($cart[$cartKey])) {
+            unset($cart[$cartKey]);
+            session()->put('cart', $cart);
         }
+
+        return back()->with('success', 'Item dihapus dari keranjang');
     }
 }

@@ -200,6 +200,61 @@
                     <input type="file" name="attachments[]" multiple accept="image/*"
                         class="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-[#E8F0E5] file:text-[#5A6852] hover:file:bg-[#D5E1D1] transition cursor-pointer">
                 </div>
+                <div class="border-t border-gray-100 pt-4">
+                    <h3 class="text-xs font-semibold text-gray-600 mb-3">Varian Produk <span class="text-gray-400 font-normal">(opsional)</span></h3>
+
+                    {{-- Mode toggle --}}
+                    <div class="flex rounded-lg bg-gray-100 p-1 mb-3" id="create-brand-tabs">
+                        <button type="button" onclick="setCreateBrandMode('existing')"
+                            id="create-tab-existing"
+                            class="flex-1 text-xs font-medium py-1.5 rounded-md transition bg-white shadow text-[#5A6852]">
+                            Pilih dari daftar
+                        </button>
+                        <button type="button" onclick="setCreateBrandMode('new')"
+                            id="create-tab-new"
+                            class="flex-1 text-xs font-medium py-1.5 rounded-md transition text-gray-500">
+                            Buat brand baru
+                        </button>
+                    </div>
+
+                    {{-- Panel: pilih existing --}}
+                    <div id="create-panel-existing">
+                        <label class="block text-xs font-semibold text-gray-600 mb-1.5">Pilih Brand</label>
+                        <select id="create-brand-select" name="brand_id"
+                            class="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#7B9B6F] transition bg-white">
+                            <option value="">-- Pilih Brand --</option>
+                            @foreach($brands as $brand)
+                                <option value="{{ $brand->id }}">{{ $brand->name }}</option>
+                            @endforeach
+                        </select>
+                        <p class="mt-1 text-[10px] text-gray-400">Biarkan kosong jika belum ingin varian.</p>
+                    </div>
+
+                    {{-- Panel: brand baru --}}
+                    <div id="create-panel-new" class="hidden">
+                        {{-- hidden brand_id = "" saat mode new --}}
+                        <input type="hidden" id="create-brand-id-hidden" name="brand_id" value="">
+                        <label class="block text-xs font-semibold text-gray-600 mb-1.5">Nama Brand Baru <span class="text-red-500">*</span></label>
+                        <input type="text" name="brand_name" id="create-brand-name-field"
+                            placeholder="Contoh: Pilot"
+                            class="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#7B9B6F] transition">
+                        <p class="mt-1 text-[10px] text-gray-400">Brand ini akan dibuat otomatis jika belum ada.</p>
+                    </div>
+
+                    {{-- Unit & harga (selalu tampil) --}}
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-3">
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-600 mb-1.5">Unit</label>
+                            <input type="text" name="unit" placeholder="Contoh: pcs"
+                                class="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#7B9B6F] transition">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-600 mb-1.5">Harga Jual Awal (Rp)</label>
+                            <input type="number" name="selling_price" min="0" placeholder="Contoh: 5000"
+                                class="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#7B9B6F] transition">
+                        </div>
+                    </div>
+                </div>
                 <div class="flex gap-3 pt-2">
                     <button type="button" onclick="closeProductCreateModal()"
                         class="flex-1 py-2.5 border border-gray-200 text-gray-600 rounded-xl text-sm font-medium hover:bg-gray-50 transition">Batal</button>
@@ -247,10 +302,67 @@
                         class="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#7B9B6F] transition resize-none"></textarea>
                 </div>
                 <div>
-                    <label class="block text-xs font-semibold text-gray-600 mb-1.5">Tambah Foto <span class="text-[10px] text-gray-400 font-normal">(foto sebelumnya tidak dihapus jika uplaod baru)</span></label>
+                    <label class="block text-xs font-semibold text-gray-600 mb-1.5">Tambah Foto <span class="text-[10px] text-gray-400 font-normal">(foto sebelumnya tidak dihapus jika upload baru)</span></label>
                     <input type="file" name="attachments[]" multiple accept="image/*"
                         class="w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-[#E8F0E5] file:text-[#5A6852] hover:file:bg-[#D5E1D1] transition cursor-pointer">
                 </div>
+
+                {{-- ===== BRAND SECTION ===== --}}
+                <div class="border-t border-gray-100 pt-4">
+                    <h3 class="text-xs font-semibold text-gray-600 mb-1">Tambah Varian Brand <span class="text-gray-400 font-normal">(opsional)</span></h3>
+                    <p class="text-[10px] text-gray-400 mb-3">Kosongkan semua field ini jika tidak ingin tambah varian.</p>
+
+                    {{-- Mode toggle --}}
+                    <div class="flex rounded-lg bg-gray-100 p-1 mb-3">
+                        <button type="button" onclick="setEditBrandMode('existing')"
+                            id="edit-tab-existing"
+                            class="flex-1 text-xs font-medium py-1.5 rounded-md transition bg-white shadow text-[#5A6852]">
+                            Pilih dari daftar
+                        </button>
+                        <button type="button" onclick="setEditBrandMode('new')"
+                            id="edit-tab-new"
+                            class="flex-1 text-xs font-medium py-1.5 rounded-md transition text-gray-500">
+                            Buat brand baru
+                        </button>
+                    </div>
+
+                    {{-- Panel: pilih existing --}}
+                    <div id="edit-panel-existing">
+                        <label class="block text-xs font-semibold text-gray-600 mb-1.5">Pilih Brand</label>
+                        <select id="edit-brand-select" name="brand_id"
+                            class="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#7B9B6F] transition bg-white">
+                            <option value="">-- Pilih Brand --</option>
+                            @foreach($brands as $brand)
+                                <option value="{{ $brand->id }}">{{ $brand->name }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+
+                    {{-- Panel: brand baru --}}
+                    <div id="edit-panel-new" class="hidden">
+                        <input type="hidden" id="edit-brand-id-hidden" name="brand_id" value="">
+                        <label class="block text-xs font-semibold text-gray-600 mb-1.5">Nama Brand Baru <span class="text-red-500">*</span></label>
+                        <input type="text" name="brand_name" id="edit-brand-name-field"
+                            placeholder="Contoh: Pilot"
+                            class="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#7B9B6F] transition">
+                        <p class="mt-1 text-[10px] text-gray-400">Brand ini akan dibuat otomatis jika belum ada.</p>
+                    </div>
+
+                    {{-- Unit & harga (selalu tampil) --}}
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-3">
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-600 mb-1.5">Unit</label>
+                            <input type="text" name="unit" placeholder="Contoh: pcs"
+                                class="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#7B9B6F] transition">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-semibold text-gray-600 mb-1.5">Harga Jual Awal (Rp)</label>
+                            <input type="number" name="selling_price" min="0" placeholder="Contoh: 5000"
+                                class="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#7B9B6F] transition">
+                        </div>
+                    </div>
+                </div>
+
                 <div class="flex gap-3 pt-2">
                     <button type="button" onclick="closeProductEditModal()"
                         class="flex-1 py-2.5 border border-gray-200 text-gray-600 rounded-xl text-sm font-medium hover:bg-gray-50 transition">Batal</button>
@@ -261,25 +373,112 @@
         </div>
     </div>
 
+
+
+
     @push('scripts')
         <script>
-            function openProductCreateModal() { document.getElementById('modal-create-product').classList.remove('hidden'); }
-            function closeProductCreateModal() { document.getElementById('modal-create-product').classList.add('hidden'); }
+            /* ====================================================
+             * Brand Tab Toggle
+             * ==================================================== */
+            function setCreateBrandMode(mode) {
+                const panelExisting = document.getElementById('create-panel-existing');
+                const panelNew      = document.getElementById('create-panel-new');
+                const tabExisting   = document.getElementById('create-tab-existing');
+                const tabNew        = document.getElementById('create-tab-new');
+                const nameField     = document.getElementById('create-brand-name-field');
+                const brandIdHidden = document.getElementById('create-brand-id-hidden');
+                const brandSelect   = document.getElementById('create-brand-select');
+
+                if (mode === 'new') {
+                    panelExisting.classList.add('hidden');
+                    panelNew.classList.remove('hidden');
+                    tabNew.classList.add('bg-white', 'shadow', 'text-[#5A6852]');
+                    tabNew.classList.remove('text-gray-500');
+                    tabExisting.classList.remove('bg-white', 'shadow', 'text-[#5A6852]');
+                    tabExisting.classList.add('text-gray-500');
+                    // disable the select so it doesn't submit brand_id
+                    brandSelect.disabled = true;
+                    brandSelect.name     = '';
+                    if (nameField) nameField.focus();
+                } else {
+                    panelExisting.classList.remove('hidden');
+                    panelNew.classList.add('hidden');
+                    tabExisting.classList.add('bg-white', 'shadow', 'text-[#5A6852]');
+                    tabExisting.classList.remove('text-gray-500');
+                    tabNew.classList.remove('bg-white', 'shadow', 'text-[#5A6852]');
+                    tabNew.classList.add('text-gray-500');
+                    // re-enable select
+                    brandSelect.disabled = false;
+                    brandSelect.name     = 'brand_id';
+                    if (nameField) nameField.value = '';
+                }
+            }
+
+            function setEditBrandMode(mode) {
+                const panelExisting = document.getElementById('edit-panel-existing');
+                const panelNew      = document.getElementById('edit-panel-new');
+                const tabExisting   = document.getElementById('edit-tab-existing');
+                const tabNew        = document.getElementById('edit-tab-new');
+                const nameField     = document.getElementById('edit-brand-name-field');
+                const brandSelect   = document.getElementById('edit-brand-select');
+
+                if (mode === 'new') {
+                    panelExisting.classList.add('hidden');
+                    panelNew.classList.remove('hidden');
+                    tabNew.classList.add('bg-white', 'shadow', 'text-[#5A6852]');
+                    tabNew.classList.remove('text-gray-500');
+                    tabExisting.classList.remove('bg-white', 'shadow', 'text-[#5A6852]');
+                    tabExisting.classList.add('text-gray-500');
+                    brandSelect.disabled = true;
+                    brandSelect.name     = '';
+                    if (nameField) nameField.focus();
+                } else {
+                    panelExisting.classList.remove('hidden');
+                    panelNew.classList.add('hidden');
+                    tabExisting.classList.add('bg-white', 'shadow', 'text-[#5A6852]');
+                    tabExisting.classList.remove('text-gray-500');
+                    tabNew.classList.remove('bg-white', 'shadow', 'text-[#5A6852]');
+                    tabNew.classList.add('text-gray-500');
+                    brandSelect.disabled = false;
+                    brandSelect.name     = 'brand_id';
+                    if (nameField) nameField.value = '';
+                }
+            }
+
+            /* ====================================================
+             * Modal helpers
+             * ==================================================== */
+            function openProductCreateModal() {
+                setCreateBrandMode('existing');
+                document.getElementById('create-brand-select').value = '';
+                document.getElementById('modal-create-product').classList.remove('hidden');
+            }
+            function closeProductCreateModal() {
+                document.getElementById('modal-create-product').classList.add('hidden');
+            }
+
             function openProductEditModal(id, name, categoryId, description) {
                 const form = document.getElementById('edit-product-form');
                 form.action = `/dashboard/products/${id}`;
                 document.getElementById('edit-product-name').value = name;
                 document.getElementById('edit-product-category').value = categoryId;
                 document.getElementById('edit-product-description').value = description;
+                setEditBrandMode('existing');
+                document.getElementById('edit-brand-select').value = '';
                 document.getElementById('modal-edit-product').classList.remove('hidden');
             }
-            function closeProductEditModal() { document.getElementById('modal-edit-product').classList.add('hidden'); }
+            function closeProductEditModal() {
+                document.getElementById('modal-edit-product').classList.add('hidden');
+            }
+
             function filterProducts(query) {
                 const q = query.toLowerCase();
                 document.querySelectorAll('.product-row').forEach(row => {
                     row.style.display = row.dataset.name.includes(q) ? '' : 'none';
                 });
             }
+
             ['modal-create-product', 'modal-edit-product'].forEach(id => {
                 document.getElementById(id).addEventListener('click', function (e) {
                     if (e.target === this) this.classList.add('hidden');

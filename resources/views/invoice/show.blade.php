@@ -1,219 +1,93 @@
-<!DOCTYPE html>
-<html lang="id">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Invoice #{{ $order->order_number }}</title>
-    
-    <style>
-        /* Base Thermal Printer Styles */
-        body {
-            font-family: 'Courier New', Courier, monospace;
-            font-size: 12px;
-            color: #000;
-            background: #fff;
-            margin: 0;
-            padding: 0;
-            display: flex;
-            justify-content: center;
-        }
-
-        .receipt-container {
-            width: 100%;
-            max-width: 80mm; /* Standard Thermal Size 80mm */
-            padding: 5mm;
-            background: #fff;
-        }
-
-        h1, h2, h3, h4, h5, p {
-            margin: 0;
-            padding: 0;
-        }
-
-        .text-center { text-align: center; }
-        .text-right { text-align: right; }
-        .text-left { text-align: left; }
-        
-        .font-bold { font-weight: bold; }
-        .text-sm { font-size: 10px; }
-        .text-lg { font-size: 16px; }
-        .text-xl { font-size: 20px; }
-
-        .divider {
-            border-top: 1px dashed #000;
-            margin: 5px 0;
-        }
-
-        .divider-solid {
-            border-top: 1px solid #000;
-            margin: 5px 0;
-        }
-
-        .mb-2 { margin-bottom: 8px; }
-        .mt-2 { margin-top: 8px; }
-        .my-2 { margin: 8px 0; }
-        .mt-4 { margin-top: 16px; }
-
-        /* Flex Utilities */
-        .flex { display: flex; }
-        .justify-between { justify-content: space-between; }
-        .items-center { align-items: center; }
-
-        /* Table */
-        table {
-            width: 100%;
-            border-collapse: collapse;
-        }
-        th, td {
-            text-align: left;
-            vertical-align: top;
-            padding: 2px 0;
-        }
-        .td-qty { width: 15%; }
-        .td-item { width: 50%; }
-        .td-price { width: 35%; text-align: right; }
-
-        /* Print Media Query */
-        @media print {
-            body { background: transparent; display: block; }
-            .receipt-container {
-                width: 100%;
-                max-width: 100%;
-                margin: 0;
-                padding: 0;
-                box-shadow: none;
-            }
-            .no-print { display: none !important; }
-        }
-
-        /* Screen Only (Preview Styling) */
-        @media screen {
-            body { background: #f3f4f6; padding: 20px; }
-            .receipt-container {
-                box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-                border-radius: 4px;
-            }
-            .print-btn {
-                display: block;
-                width: 100%;
-                max-width: 80mm;
-                margin: 0 auto 20px auto;
-                background: #96A78D; /* brand-primary */
-                color: #fff;
-                border: none;
-                padding: 10px;
-                border-radius: 8px;
-                font-family: sans-serif;
-                font-weight: bold;
-                cursor: pointer;
-                text-align: center;
-            }
-            .print-btn:hover { background: #7c8e73; }
-        }
-    </style>
-</head>
-<body>
-
-    <div>
-        <button onclick="window.print()" class="print-btn no-print">
-            Cetak Struk (Thermal)
-        </button>
-
-        <div class="receipt-container">
-            
-            <!-- Header -->
-            <div class="text-center mb-2">
-                <h2 class="text-xl font-bold">SINERGI</h2>
-                <p class="text-sm">ATK & Jasa Fotocopy</p>
-                <p class="text-sm">Jl. Raya Sukamaju No. 123</p>
-                <p class="text-sm">Telp: 0812-3456-7890</p>
-            </div>
-
-            <div class="divider"></div>
-
-            <!-- Order Info -->
-            <div class="mb-2 text-sm">
-                <div class="flex justify-between">
-                    <span>No:</span>
-                    <span>{{ $order->order_number }}</span>
-                </div>
-                <div class="flex justify-between">
-                    <span>Tgl:</span>
-                    <span>{{ \Carbon\Carbon::parse($order->created_at)->format('d/m/Y H:i') }}</span>
-                </div>
-                <div class="flex justify-between">
-                    <span>Kasir:</span>
-                    <span>{{ $order->employee ? $order->employee->name : 'Sistem' }}</span>
-                </div>
-                <div class="flex justify-between">
-                    <span>Pelanggan:</span>
-                    <span>{{ $order->user->name }}</span>
-                </div>
-            </div>
-
-            <!-- Queue Number -->
-            <div class="divider-solid"></div>
-            <div class="text-center my-2">
-                <p class="text-sm">Nomor Antrean</p>
-                <h1 style="font-size: 32px; margin: 4px 0;">{{ str_pad($order->queue_number, 3, '0', STR_PAD_LEFT) }}</h1>
-            </div>
-            <div class="divider-solid"></div>
-
-            <!-- Items -->
-            <div class="mt-2 mb-2">
-                <table>
-                    @foreach($order->items as $item)
-                        @php
-                            $itemName = $item->product_brand_id ? $item->productBrand->product->name : $item->service->name;
-                        @endphp
-                        <tr>
-                            <td colspan="3" class="font-bold">{{ $itemName }}</td>
-                        </tr>
-                        <tr>
-                            <td class="td-qty">{{ $item->quantity }}x</td>
-                            <td class="td-item">@ {{ number_format($item->price_per_unit, 0, ',', '.') }}</td>
-                            <td class="td-price">{{ number_format($item->subtotal_price, 0, ',', '.') }}</td>
-                        </tr>
-                    @endforeach
-                </table>
-            </div>
-
-            <div class="divider"></div>
-
-            <!-- Totals -->
-            <div class="mt-2 mb-2">
-                <div class="flex justify-between font-bold text-lg">
-                    <span>TOTAL</span>
-                    <span>Rp{{ number_format($order->total_price, 0, ',', '.') }}</span>
-                </div>
-                <div class="flex justify-between text-sm mt-2">
-                    <span>Status:</span>
-                    <span>{{ strtoupper($order->status) }}</span>
-                </div>
-            </div>
-
-            <div class="divider"></div>
-
-            <!-- Footer -->
-            <div class="text-center mt-4 mb-2">
-                <p class="font-bold">Terima Kasih</p>
-                <p class="text-sm">Barang yang sudah dibeli tidak dapat ditukar/dikembalikan.</p>
-            </div>
-
-            <!-- Optional Barcode Area -->
-            <div class="text-center mt-4">
-                <p class="text-sm">-- {{ $order->id }} --</p>
-            </div>
-
+<x-layouts.app title="Detail Pesanan - Sinergi">
+    <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 mt-4 lg:mt-8">
+        <div class="flex items-center gap-3 mb-8">
+            <a href="{{ url('/history') }}"
+                class="w-10 h-10 bg-white/50 rounded-full flex items-center justify-center hover:bg-white text-slate-600 shadow-sm transition">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                        d="M10 19l-7-7m0 0l7-7m-7 7h18"></path>
+                </svg>
+            </a>
+            <h1 class="text-3xl font-bold text-brand-dark">Detail Pesanan</h1>
         </div>
-    </div>
 
-    <!-- Auto print on load -->
-    <script>
-        window.onload = function() {
-            // Uncomment line below to auto-print when page loads
-            // window.print();
-        }
-    </script>
-</body>
-</html>
+        <x-ui.glass-card class="p-8">
+            <div
+                class="flex flex-col md:flex-row justify-between items-start md:items-center border-b border-white/40 pb-6 mb-6">
+                <div>
+                    <p class="text-sm text-slate-500 mb-1">No. Order</p>
+                    <h2 class="text-2xl font-bold text-slate-800">{{ $order->order_number }}</h2>
+                    <p class="text-sm font-semibold text-slate-600 mt-2">{{ $order->created_at->format('d M Y, H:i') }}
+                    </p>
+                </div>
+                <div class="mt-4 md:mt-0 text-right">
+                    @if($order->status === 'pending')
+                        <span
+                            class="bg-yellow-100 text-yellow-700 px-4 py-2 rounded-lg text-sm font-bold uppercase tracking-wider block mb-2">Menunggu
+                            Pembayaran</span>
+                    @elseif($order->status === 'processing')
+                        <span
+                            class="bg-blue-100 text-blue-700 px-4 py-2 rounded-lg text-sm font-bold uppercase tracking-wider block mb-2">Sedang
+                            Diproses</span>
+                    @elseif($order->status === 'completed')
+                        <span
+                            class="bg-brand-primary text-white px-4 py-2 rounded-lg text-sm font-bold uppercase tracking-wider block mb-2">Pesanan
+                            Selesai</span>
+                    @else
+                        <span
+                            class="bg-red-100 text-red-700 px-4 py-2 rounded-lg text-sm font-bold uppercase tracking-wider block mb-2">Dibatalkan</span>
+                    @endif
+                    <button onclick="window.print()"
+                        class="text-brand-primary hover:text-brand-dark text-sm font-semibold transition flex items-center gap-1 justify-end ml-auto">
+                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                                d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z">
+                            </path>
+                        </svg>
+                        Cetak Invoice
+                    </button>
+                </div>
+            </div>
+
+            <h3 class="text-lg font-bold text-brand-dark mb-4 mt-2">Daftar Item</h3>
+            <div class="space-y-4 mb-8">
+                @foreach($order->items as $item)
+                    <div class="flex justify-between items-center bg-white/50 p-4 rounded-xl border border-white/60">
+                        <div>
+                            @if(isset($item->service))
+                                <span
+                                    class="bg-brand-tertiary text-brand-dark text-[10px] font-bold px-2 py-0.5 rounded uppercase tracking-wider mb-1 inline-block">Jasa</span>
+                                <h4 class="font-bold text-slate-800">{{ $item->service->name }}</h4>
+                            @elseif(isset($item->productBrand))
+                                <span
+                                    class="bg-brand-primary text-white text-[10px] font-bold px-2 py-0.5 rounded uppercase tracking-wider mb-1 inline-block">Produk</span>
+                                <h4 class="font-bold text-slate-800">{{ $item->productBrand->product->name }}
+                                    ({{ $item->productBrand->brand->name }})</h4>
+                            @else
+                                <h4 class="font-bold text-slate-800">Item Produk/Jasa</h4>
+                            @endif
+                            <p class="text-sm font-semibold text-slate-500 mt-1">{{ $item->quantity }} x Rp
+                                {{ number_format($item->price_per_unit, 0, ',', '.') }}
+                            </p>
+                        </div>
+                        <div class="text-right font-bold text-slate-800">
+                            Rp {{ number_format($item->subtotal_price, 0, ',', '.') }}
+                        </div>
+                    </div>
+                @endforeach
+            </div>
+
+            <div class="border-t border-white/60 pt-6 flex justify-between items-end">
+                <span class="text-slate-600 font-bold uppercase tracking-wider">Total Pembayaran</span>
+                <span class="text-3xl font-extrabold text-brand-dark tracking-tight">Rp
+                    {{ number_format($order->total_price, 0, ',', '.') }}</span>
+            </div>
+            @if($order->status == 'pending')
+                <div class="mt-8 bg-blue-50/50 border border-blue-100 rounded-xl p-4 text-center">
+                    <p class="text-blue-800 text-sm font-medium">Pembayaran akan dikelola melalui Xendit. (Fitur Integrasi
+                        Gateway Segera Hadir)</p>
+                </div>
+            @endif
+        </x-ui.glass-card>
+    </div>
+</x-layouts.app>
