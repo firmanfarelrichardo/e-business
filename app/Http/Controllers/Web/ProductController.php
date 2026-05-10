@@ -7,6 +7,7 @@ use App\Http\Requests\StoreProductRequest;
 use App\Http\Requests\UpdateProductRequest;
 use App\Services\ProductService;
 use App\Models\ProductCategory;
+use App\Models\Brand;
 
 /**
  * Web\ProductController
@@ -37,10 +38,11 @@ class ProductController extends Controller
      */
     public function index()
     {
-        $products   = $this->productService->getAllProductsWithInventory();
+        $products = $this->productService->getAllProductsWithInventory();
         $categories = ProductCategory::orderBy('name')->get();
+        $brands = Brand::orderBy('name')->get();
 
-        return view('dashboard.products.index', compact('products', 'categories'));
+        return view('dashboard.products.index', compact('products', 'categories', 'brands'));
     }
 
     /**
