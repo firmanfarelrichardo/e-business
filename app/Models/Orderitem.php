@@ -2,34 +2,25 @@
 
 namespace App\Models;
 
-use App\Traits\HasUuid;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Concerns\HasUuids;
 
 class OrderItem extends Model
 {
-    use HasUuid;
+    use HasFactory, HasUuids;
 
-    public $timestamps = false;
-
-    protected $table = 'order_item';
+    public $timestamps = false; // Based on migration
 
     protected $fillable = [
-        'order_id',
-        'product_brand_id',
-        'service_id',
+        'subtotal_price',
         'quantity',
         'price_per_unit',
-        'subtotal_price',
         'note',
+        'order_id',
+        'product_brand_id',
+        'service_id'
     ];
-
-    protected function casts(): array
-    {
-        return [
-            'price_per_unit' => 'decimal:0',
-            'subtotal_price' => 'decimal:0',
-        ];
-    }
 
     public function order()
     {

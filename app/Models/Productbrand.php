@@ -2,30 +2,20 @@
 
 namespace App\Models;
 
-use App\Traits\HasUuid;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Concerns\HasUuids;
 
 class ProductBrand extends Model
 {
-    use HasUuid;
-
-    public $timestamps = false;
+    use HasFactory, HasUuids;
 
     protected $fillable = [
         'unit',
         'selling_price',
         'product_id',
-        'brand_id',
-        'created_at',
+        'brand_id'
     ];
-
-    protected function casts(): array
-    {
-        return [
-            'selling_price' => 'decimal:0',
-            'created_at'    => 'datetime',
-        ];
-    }
 
     public function product()
     {
@@ -42,8 +32,12 @@ class ProductBrand extends Model
         return $this->hasMany(Batch::class);
     }
 
-    // Ambil stok total dari semua batch aktif
-    public function getTotalStockAttribute(): int
+    public function orderItems()
+    {
+        return $this->hasMany(OrderItem::class);
+    }
+
+    public function getCurrentStockAttribute()
     {
         return $this->batches()->where('is_active', true)->sum('current_stock');
     }
