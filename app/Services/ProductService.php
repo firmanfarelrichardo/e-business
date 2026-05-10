@@ -95,9 +95,18 @@ class ProductService
             $paths = $this->uploadAttachments($data['attachments']);
         }
 
+        $categoryId = $data['category_id'] ?? null;
+        if (!empty($data['category_name'])) {
+            $category = \App\Models\ProductCategory::firstOrCreate(
+                ['name' => trim($data['category_name'])],
+                ['description' => null]
+            );
+            $categoryId = $category->id;
+        }
+
         $product = $this->productRepository->create([
             'name' => $data['name'],
-            'category_id' => $data['category_id'],
+            'category_id' => $categoryId,
             'description' => $data['description'] ?? null,
             'attachments' => !empty($paths) ? $paths : null,
         ]);
@@ -143,9 +152,18 @@ class ProductService
             $existing = array_merge($existing, $newPaths);
         }
 
+        $categoryId = $data['category_id'] ?? null;
+        if (!empty($data['category_name'])) {
+            $category = \App\Models\ProductCategory::firstOrCreate(
+                ['name' => trim($data['category_name'])],
+                ['description' => null]
+            );
+            $categoryId = $category->id;
+        }
+
         $updatedProduct = $this->productRepository->update($id, [
             'name' => $data['name'],
-            'category_id' => $data['category_id'],
+            'category_id' => $categoryId,
             'description' => $data['description'] ?? null,
             'attachments' => !empty($existing) ? array_values($existing) : null,
         ]);

@@ -181,13 +181,35 @@
                 <div>
                     <label class="block text-xs font-semibold text-gray-600 mb-1.5">Kategori <span
                             class="text-red-500">*</span></label>
-                    <select name="category_id" required
-                        class="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#7B9B6F] transition bg-white">
-                        <option value="">-- Pilih Kategori --</option>
-                        @foreach($categories as $cat)
-                            <option value="{{ $cat->id }}">{{ $cat->name }}</option>
-                        @endforeach
-                    </select>
+                    
+                    <div class="flex rounded-lg bg-gray-100 p-1 mb-2">
+                        <button type="button" onclick="setCreateCategoryMode('existing')"
+                            id="create-cat-tab-existing"
+                            class="flex-1 text-xs font-medium py-1.5 rounded-md transition bg-white shadow text-[#5A6852]">
+                            Pilih dari daftar
+                        </button>
+                        <button type="button" onclick="setCreateCategoryMode('new')"
+                            id="create-cat-tab-new"
+                            class="flex-1 text-xs font-medium py-1.5 rounded-md transition text-gray-500">
+                            Buat kategori baru
+                        </button>
+                    </div>
+
+                    <div id="create-cat-panel-existing">
+                        <select name="category_id" id="create-category-select" required
+                            class="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#7B9B6F] transition bg-white">
+                            <option value="">-- Pilih Kategori --</option>
+                            @foreach($categories as $cat)
+                                <option value="{{ $cat->id }}">{{ $cat->name }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+
+                    <div id="create-cat-panel-new" class="hidden">
+                        <input type="text" name="category_name" id="create-category-name-field"
+                            placeholder="Contoh: Alat Tulis"
+                            class="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#7B9B6F] transition">
+                    </div>
                 </div>
                 <div>
                     <label class="block text-xs font-semibold text-gray-600 mb-1.5">Deskripsi</label>
@@ -288,12 +310,34 @@
                 <div>
                     <label class="block text-xs font-semibold text-gray-600 mb-1.5">Kategori <span
                             class="text-red-500">*</span></label>
-                    <select name="category_id" id="edit-product-category" required
-                        class="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#7B9B6F] transition bg-white">
-                        @foreach($categories as $cat)
-                            <option value="{{ $cat->id }}">{{ $cat->name }}</option>
-                        @endforeach
-                    </select>
+                    
+                    <div class="flex rounded-lg bg-gray-100 p-1 mb-2">
+                        <button type="button" onclick="setEditCategoryMode('existing')"
+                            id="edit-cat-tab-existing"
+                            class="flex-1 text-xs font-medium py-1.5 rounded-md transition bg-white shadow text-[#5A6852]">
+                            Pilih dari daftar
+                        </button>
+                        <button type="button" onclick="setEditCategoryMode('new')"
+                            id="edit-cat-tab-new"
+                            class="flex-1 text-xs font-medium py-1.5 rounded-md transition text-gray-500">
+                            Buat kategori baru
+                        </button>
+                    </div>
+
+                    <div id="edit-cat-panel-existing">
+                        <select name="category_id" id="edit-product-category" required
+                            class="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#7B9B6F] transition bg-white">
+                            @foreach($categories as $cat)
+                                <option value="{{ $cat->id }}">{{ $cat->name }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+
+                    <div id="edit-cat-panel-new" class="hidden">
+                        <input type="text" name="category_name" id="edit-category-name-field"
+                            placeholder="Contoh: Alat Tulis"
+                            class="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#7B9B6F] transition">
+                    </div>
                 </div>
                 <div>
                     <label class="block text-xs font-semibold text-gray-600 mb-1.5">Deskripsi</label>
@@ -446,11 +490,74 @@
             }
 
             /* ====================================================
+             * Category Tab Toggle
+             * ==================================================== */
+            function setCreateCategoryMode(mode) {
+                const panelExisting = document.getElementById('create-cat-panel-existing');
+                const panelNew      = document.getElementById('create-cat-panel-new');
+                const tabExisting   = document.getElementById('create-cat-tab-existing');
+                const tabNew        = document.getElementById('create-cat-tab-new');
+                const nameField     = document.getElementById('create-category-name-field');
+                const catSelect     = document.getElementById('create-category-select');
+
+                if (mode === 'new') {
+                    panelExisting.classList.add('hidden');
+                    panelNew.classList.remove('hidden');
+                    tabNew.classList.add('bg-white', 'shadow', 'text-[#5A6852]');
+                    tabNew.classList.remove('text-gray-500');
+                    tabExisting.classList.remove('bg-white', 'shadow', 'text-[#5A6852]');
+                    tabExisting.classList.add('text-gray-500');
+                    catSelect.disabled = true;
+                    if (nameField) nameField.focus();
+                } else {
+                    panelExisting.classList.remove('hidden');
+                    panelNew.classList.add('hidden');
+                    tabExisting.classList.add('bg-white', 'shadow', 'text-[#5A6852]');
+                    tabExisting.classList.remove('text-gray-500');
+                    tabNew.classList.remove('bg-white', 'shadow', 'text-[#5A6852]');
+                    tabNew.classList.add('text-gray-500');
+                    catSelect.disabled = false;
+                    if (nameField) nameField.value = '';
+                }
+            }
+
+            function setEditCategoryMode(mode) {
+                const panelExisting = document.getElementById('edit-cat-panel-existing');
+                const panelNew      = document.getElementById('edit-cat-panel-new');
+                const tabExisting   = document.getElementById('edit-cat-tab-existing');
+                const tabNew        = document.getElementById('edit-cat-tab-new');
+                const nameField     = document.getElementById('edit-category-name-field');
+                const catSelect     = document.getElementById('edit-product-category');
+
+                if (mode === 'new') {
+                    panelExisting.classList.add('hidden');
+                    panelNew.classList.remove('hidden');
+                    tabNew.classList.add('bg-white', 'shadow', 'text-[#5A6852]');
+                    tabNew.classList.remove('text-gray-500');
+                    tabExisting.classList.remove('bg-white', 'shadow', 'text-[#5A6852]');
+                    tabExisting.classList.add('text-gray-500');
+                    catSelect.disabled = true;
+                    if (nameField) nameField.focus();
+                } else {
+                    panelExisting.classList.remove('hidden');
+                    panelNew.classList.add('hidden');
+                    tabExisting.classList.add('bg-white', 'shadow', 'text-[#5A6852]');
+                    tabExisting.classList.remove('text-gray-500');
+                    tabNew.classList.remove('bg-white', 'shadow', 'text-[#5A6852]');
+                    tabNew.classList.add('text-gray-500');
+                    catSelect.disabled = false;
+                    if (nameField) nameField.value = '';
+                }
+            }
+
+            /* ====================================================
              * Modal helpers
              * ==================================================== */
             function openProductCreateModal() {
                 setCreateBrandMode('existing');
+                setCreateCategoryMode('existing');
                 document.getElementById('create-brand-select').value = '';
+                document.getElementById('create-category-select').value = '';
                 document.getElementById('modal-create-product').classList.remove('hidden');
             }
             function closeProductCreateModal() {
@@ -464,6 +571,7 @@
                 document.getElementById('edit-product-category').value = categoryId;
                 document.getElementById('edit-product-description').value = description;
                 setEditBrandMode('existing');
+                setEditCategoryMode('existing');
                 document.getElementById('edit-brand-select').value = '';
                 document.getElementById('modal-edit-product').classList.remove('hidden');
             }

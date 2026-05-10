@@ -45,7 +45,8 @@ class StoreProductRequest extends FormRequest
     {
         return [
             'name' => 'required|string|max:50',
-            'category_id' => 'required|uuid|exists:product_categories,id',
+            'category_id' => 'nullable|uuid|exists:product_categories,id',
+            'category_name' => 'nullable|string|max:50',
             'description' => 'nullable|string|max:255',
             'attachments' => 'nullable|array|max:10',
             'attachments.*' => 'image|mimes:jpeg,png,jpg,webp|max:4096',
@@ -84,6 +85,13 @@ class StoreProductRequest extends FormRequest
     public function withValidator($validator)
     {
         $validator->after(function ($validator) {
+            $catName = trim($this->input('category_name', ''));
+            $catId = $this->input('category_id');
+
+            if ($catName === '' && empty($catId)) {
+                $validator->errors()->add('category_id', 'Silakan pilih kategori yang ada atau buat kategori baru.');
+            }
+
             $brandName = trim($this->input('brand_name', ''));
             $brandId = $this->input('brand_id');
 
