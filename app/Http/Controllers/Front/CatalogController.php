@@ -40,7 +40,19 @@ class CatalogController extends Controller
             $categories = [['name' => 'Belum ada kategori', 'url' => '#']];
         }
 
-        // 2. Ambil subcategories (Merek) secara dinamis sesuai kategori produk yang ada
+        // 2. Tentukan kategori aktif untuk judul di UI
+        $activeCategoryName = 'Semua Produk';
+        if ($request->has('category') && $request->category != '') {
+            $currentCategory = \App\Models\ProductCategory::find($request->category);
+            if ($currentCategory) {
+                $activeCategoryName = $currentCategory->name;
+            }
+        } elseif (!empty($dbCategories)) {
+             // Jika tidak ada filter, default ke kategori pertama (opsional, atau biarkan 'Semua Produk')
+             // $activeCategoryName = $dbCategories[0]->name;
+        }
+
+        // 3. Ambil subcategories (Merek) secara dinamis sesuai kategori produk yang ada
         $brandsQuery = \App\Models\Brand::whereHas('productBrands.product', function ($q) use ($request) {
             if ($request->has('category') && $request->category != '') {
                 $q->where('category_id', $request->category);
@@ -95,7 +107,7 @@ class CatalogController extends Controller
             // tapi UI akan menampilkan tidak ada produk.
         }
 
-        return view('katalog.index', compact('categories', 'subcategories', 'products', 'dbProductBrands'));
+        return view('katalog.index', compact('categories', 'subcategories', 'products', 'dbProductBrands', 'activeCategoryName'));
     }
 
     public function jasa(Request $request)
