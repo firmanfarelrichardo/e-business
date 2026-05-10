@@ -67,7 +67,10 @@ Route::post('/web-auth/logout', function (Illuminate\Http\Request $request) {
 // ── Catalog UI Pages ──────────────────────────────────────────────
 Route::get('/katalog', [CatalogController::class, 'index']);
 Route::get('/jasa', [CatalogController::class, 'jasa']);
-Route::get('/keranjang', [CatalogController::class, 'keranjang']);
+Route::get('/keranjang', [App\Http\Controllers\Front\CatalogController::class, 'keranjang']);
+Route::post('/cart/add', [App\Http\Controllers\Front\CartController::class, 'add']);
+Route::post('/cart/update', [App\Http\Controllers\Front\CartController::class, 'update']);
+Route::post('/cart/remove', [App\Http\Controllers\Front\CartController::class, 'remove']);
 
 Route::get('/not-configured', function () {
     return view('errors.not-configured');
