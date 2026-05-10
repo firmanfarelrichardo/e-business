@@ -133,15 +133,13 @@
                         <div id="expense-items" class="space-y-3">
                             <div class="expense-item grid grid-cols-12 gap-2 items-start">
                                 <div class="col-span-5">
-                                    <select name="items[0][product_brand_id]"
-                                        class="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#7B9B6F] transition bg-white"
-                                        required>
-                                        <option value="">-- Pilih Produk --</option>
-                                        @foreach($productBrands as $pb)
-                                            <option value="{{ $pb->id }}">{{ optional($pb->product)->name ?? '-' }}
-                                                ({{ optional($pb->brand)->name ?? '-' }})</option>
-                                        @endforeach
-                                    </select>
+                                    <div class="pb-search-wrap">
+                                        <input type="text"
+                                            class="pb-search-input w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#7B9B6F] transition"
+                                            placeholder="Cari produk/varian..." autocomplete="off">
+                                        <input type="hidden" name="items[0][product_brand_id]" class="pb-hidden-input" required>
+                                        <div class="pb-dropdown"></div>
+                                    </div>
                                 </div>
                                 <div class="col-span-3">
                                     <input type="number" name="items[0][quantity]" min="1" placeholder="Qty" required
@@ -189,38 +187,140 @@
         </div>
     @endif
 
+    @push('styles')
+        <style>
+            .pb-search-wrap {
+                position: relative;
+            }
+
+            .pb-dropdown {
+                display: none;
+                position: absolute;
+                z-index: 200;
+                left: 0;
+                right: 0;
+                top: 100%;
+                background: #fff;
+                border: 1px solid #e5e7eb;
+                border-radius: 12px;
+                box-shadow: 0 4px 16px rgba(0, 0, 0, .12);
+                max-height: 200px;
+                overflow-y: auto;
+                margin-top: 2px;
+            }
+
+            .pb-dropdown.open {
+                display: block;
+            }
+
+            .pb-option {
+                padding: 8px 12px;
+                font-size: 13px;
+                cursor: pointer;
+                color: #374151;
+            }
+
+            .pb-option:hover,
+            .pb-option.focused {
+                background: #E8F0E5;
+                color: #3d5c36;
+            }
+
+            .pb-option.no-result {
+                color: #9ca3af;
+                cursor: default;
+            }
+        </style>
+    @endpush
+
     @push('scripts')
         <script>
-            let expenseItemCount = 1;
             const productBrands = @json($productBrands->map(fn($pb) => ['id' => $pb->id, 'label' => (optional($pb->product)->name ?? '-') . ' (' . (optional($pb->brand)->name ?? '-') . ')']));
+            let expenseItemCount = 1;
+
+            // ── Searchable dropdown widget ──────────────────────────────────────
+            function initExpenseSearch(wrapper) {
+                const searchInput = wrapper.querySelector('.pb-search-input');
+                const hiddenInput = wrapper.querySelector('.pb-hidden-input');
+                const dropdown = wrapper.querySelector('.pb-dropdown');
+
+                function render(filter) {
+                    const kw = (filter || '').toLowerCase();
+                    const filtered = productBrands.filter(pb => pb.label.toLowerCase().includes(kw));
+                    if (filtered.length === 0) {
+                        dropdown.innerHTML = '<div class="pb-option no-result">Produk tidak ditemukan</div>';
+                        return;
+                    }
+                    dropdown.innerHTML = filtered.map(pb =>
+                        `<div class="pb-option" data-id="${pb.id}" data-label="${pb.label}">${pb.label}</div>`
+                    ).join('');
+                    dropdown.querySelectorAll('.pb-option[data-id]').forEach(opt => {
+                        opt.addEventListener('mousedown', (e) => {
+                            e.preventDefault();
+                            hiddenInput.value = opt.dataset.id;
+                            searchInput.value = opt.dataset.label;
+                            dropdown.classList.remove('open');
+                        });
+                    });
+                }
+
+                searchInput.addEventListener('focus', () => { render(searchInput.value); dropdown.classList.add('open'); });
+                searchInput.addEventListener('input', () => render(searchInput.value));
+                searchInput.addEventListener('blur', () => setTimeout(() => dropdown.classList.remove('open'), 150));
+            }
+
+            // ── Build one expense-item row HTML ─────────────────────────────────
+            function buildExpenseItemHTML(idx) {
+                const firstPb = productBrands.length > 0 ? productBrands[0] : null;
+                return `
+                                            <div class="expense-item grid grid-cols-12 gap-2 items-start">
+                                                <div class="col-span-5">
+                                                    <div class="pb-search-wrap">
+                                                        <input type="text" class="pb-search-input w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#7B9B6F] transition" placeholder="Cari produk/varian..." autocomplete="off">
+                                                        <input type="hidden" name="items[${idx}][product_brand_id]" class="pb-hidden-input" required>
+                                                        <div class="pb-dropdown"></div>
+                                                    </div>
+                                                </div>
+                                                <div class="col-span-3">
+                                                    <input type="number" name="items[${idx}][quantity]" min="1" placeholder="Qty" required
+                                                        class="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#7B9B6F] transition">
+                                                </div>
+                                                <div class="col-span-3">
+                                                    <input type="number" name="items[${idx}][purchase_price]" min="0" placeholder="Harga beli (Rp)" required
+                                                        class="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#7B9B6F] transition">
+                                                </div>
+                                                <div class="col-span-1 flex items-center justify-center pt-2">
+                                                    <button type="button" onclick="this.closest('.expense-item').remove()" class="text-red-400 hover:text-red-600 transition">
+                                                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
+                                                    </button>
+                                                </div>
+                                            </div>`;
+            }
 
             function addExpenseItem() {
                 const idx = expenseItemCount++;
                 const container = document.getElementById('expense-items');
-                const options = productBrands.map(pb => `<option value="${pb.id}">${pb.label}</option>`).join('');
-                container.insertAdjacentHTML('beforeend', `
-                        <div class="expense-item grid grid-cols-12 gap-2 items-start">
-                            <div class="col-span-5">
-                                <select name="items[${idx}][product_brand_id]" class="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#7B9B6F] transition bg-white" required>
-                                    <option value="">-- Pilih Produk --</option>${options}
-                                </select>
-                            </div>
-                            <div class="col-span-3">
-                                <input type="number" name="items[${idx}][quantity]" min="1" placeholder="Qty" required
-                                    class="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#7B9B6F] transition">
-                            </div>
-                            <div class="col-span-3">
-                                <input type="number" name="items[${idx}][purchase_price]" min="0" placeholder="Harga beli (Rp)" required
-                                    class="w-full border border-gray-200 rounded-xl px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-[#7B9B6F] transition">
-                            </div>
-                            <div class="col-span-1 flex items-center justify-center pt-2">
-                                <button type="button" onclick="this.closest('.expense-item').remove()" class="text-red-400 hover:text-red-600 transition">
-                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/></svg>
-                                </button>
-                            </div>
-                        </div>
-                    `);
+                container.insertAdjacentHTML('beforeend', buildExpenseItemHTML(idx));
+                const newWrap = container.querySelectorAll('.pb-search-wrap');
+                initExpenseSearch(newWrap[newWrap.length - 1]);
             }
+
+            // ── Init the first (pre-rendered) row ────────────────────────────────
+            document.addEventListener('DOMContentLoaded', () => {
+                document.querySelectorAll('.pb-search-wrap').forEach(initExpenseSearch);
+
+                // Guard: warn before submit if any product_brand_id is blank
+                document.querySelector('form[action*="expenses"]')?.addEventListener('submit', (e) => {
+                    const blanks = document.querySelectorAll('.pb-hidden-input');
+                    for (const b of blanks) {
+                        if (!b.value) {
+                            e.preventDefault();
+                            alert('Pilih produk untuk setiap item pengeluaran terlebih dahulu.');
+                            return;
+                        }
+                    }
+                });
+            });
         </script>
     @endpush
 @endsection

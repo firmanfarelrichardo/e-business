@@ -44,11 +44,15 @@ class StoreProductRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'name'          => 'required|string|max:50',
-            'category_id'   => 'required|uuid|exists:product_categories,id',
-            'description'   => 'nullable|string|max:255',
-            'attachments'   => 'nullable|array|max:10',
+            'name' => 'required|string|max:50',
+            'category_id' => 'required|uuid|exists:product_categories,id',
+            'description' => 'nullable|string|max:255',
+            'attachments' => 'nullable|array|max:10',
             'attachments.*' => 'image|mimes:jpeg,png,jpg,webp|max:4096',
+            'brand_id' => 'nullable|uuid|exists:brands,id',
+            'brand_name' => 'nullable|string|max:50',
+            'unit' => 'nullable|string|max:100',
+            'selling_price' => 'nullable|numeric|min:0',
         ];
     }
 
@@ -63,14 +67,35 @@ class StoreProductRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'name.required'          => 'Nama produk wajib diisi.',
-            'name.max'               => 'Nama produk maksimal 50 karakter.',
-            'category_id.required'   => 'Kategori produk wajib dipilih.',
-            'category_id.exists'     => 'Kategori yang dipilih tidak valid.',
-            'attachments.max'        => 'Maksimal 10 gambar per produk.',
-            'attachments.*.image'    => 'File harus berupa gambar.',
-            'attachments.*.mimes'    => 'Format gambar harus JPEG, PNG, JPG, atau WebP.',
-            'attachments.*.max'      => 'Ukuran gambar maksimal 4MB per file.',
+            'name.required' => 'Nama produk wajib diisi.',
+            'name.max' => 'Nama produk maksimal 50 karakter.',
+            'category_id.required' => 'Kategori produk wajib dipilih.',
+            'category_id.exists' => 'Kategori yang dipilih tidak valid.',
+            'attachments.max' => 'Maksimal 10 gambar per produk.',
+            'attachments.*.image' => 'File harus berupa gambar.',
+            'attachments.*.mimes' => 'Format gambar harus JPEG, PNG, JPG, atau WebP.',
+            'attachments.*.max' => 'Ukuran gambar maksimal 4MB per file.',
         ];
+    }
+
+    /**
+     * Configure the validator instance.
+     */
+    public function withValidator($validator)
+    {
+        $validator->after(function ($validator) {
+            $brandName = trim($this->input('brand_name', ''));
+            $brandId = $this->input('brand_id');
+
+            if ($brandName !== '' || $brandId) {
+                if (empty($this->input('unit'))) {
+                    $validator->errors()->add('unit', 'Unit wajib diisi saat menambahkan varian brand.');
+                }
+                $sellingPrice = $this->input('selling_price');
+                if (!isset($sellingPrice) || $sellingPrice === '') {
+                    $validator->errors()->add('selling_price', 'Harga jual wajib diisi saat menambahkan varian brand.');
+                }
+            }
+        });
     }
 }

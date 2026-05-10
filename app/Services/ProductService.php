@@ -4,6 +4,8 @@ namespace App\Services;
 
 use App\Repositories\ProductRepository;
 use Illuminate\Support\Facades\Storage;
+use App\Models\Brand;
+use App\Models\ProductBrand;
 
 /**
  * ProductService
@@ -93,12 +95,16 @@ class ProductService
             $paths = $this->uploadAttachments($data['attachments']);
         }
 
-        return $this->productRepository->create([
-            'name'        => $data['name'],
+        $product = $this->productRepository->create([
+            'name' => $data['name'],
             'category_id' => $data['category_id'],
             'description' => $data['description'] ?? null,
             'attachments' => !empty($paths) ? $paths : null,
         ]);
+
+        $this->syncProductBrand($product->id, $data);
+
+        return $product;
     }
 
     /**
@@ -137,12 +143,16 @@ class ProductService
             $existing = array_merge($existing, $newPaths);
         }
 
-        return $this->productRepository->update($id, [
-            'name'        => $data['name'],
+        $updatedProduct = $this->productRepository->update($id, [
+            'name' => $data['name'],
             'category_id' => $data['category_id'],
             'description' => $data['description'] ?? null,
             'attachments' => !empty($existing) ? array_values($existing) : null,
         ]);
+
+        $this->syncProductBrand($id, $data);
+
+        return $updatedProduct;
     }
 
     /**
@@ -189,5 +199,36 @@ class ProductService
             }
         }
         return $paths;
+    }
+
+    /**
+     * Sycn ProductBrand relation (new brand variant addition).
+     *
+     * @param string $productId
+     * @param array $data
+     */
+    protected function syncProductBrand(string $productId, array $data): void
+    {
+        $brandName = trim($data['brand_name'] ?? '');
+        $brandId = $data['brand_id'] ?? null;
+
+        if ($brandName !== '' || $brandId) {
+            $brand = $brandName !== ''
+                ? Brand::firstOrCreate(['name' => $brandName], ['description' => null])
+                : Brand::findOrFail($brandId);
+
+            $alreadyLinked = ProductBrand::where('product_id', $productId)
+                ->where('brand_id', $brand->id)
+                ->exists();
+
+            if (!$alreadyLinked) {
+                ProductBrand::create([
+                    'unit' => $data['unit'],
+                    'selling_price' => collect($data)->get('selling_price'),
+                    'product_id' => $productId,
+                    'brand_id' => $brand->id,
+                ]);
+            }
+        }
     }
 }
