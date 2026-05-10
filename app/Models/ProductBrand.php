@@ -62,4 +62,14 @@ class ProductBrand extends Model
 
         return $totalQuantity > 0 ? intdiv((int) $totalValue, (int) $totalQuantity) : 0;
     }
+
+    /**
+     * Recalculate WAC.
+     * With the current dynamic WAC implementation, this does not need to store to DB.
+     * Added to prevent BadMethodCallException.
+     */
+    public function recalculateWAC()
+    {
+        return $this->average_cost;
+    }
 }

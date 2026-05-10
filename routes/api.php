@@ -23,3 +23,6 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::apiResource('users', UserController::class);
 });
 
+// ── Webhooks ───────────────────────────────────────────────────────
+Route::post('/webhooks/xendit', [App\Http\Controllers\Api\XenditWebhookController::class, 'handleCallback'])
+    ->name('webhook.xendit');

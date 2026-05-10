@@ -8,11 +8,14 @@ use App\Repositories\BatchRepository;
 use App\Repositories\ProductBrandRepository;
 use App\Repositories\ServiceRepository;
 use App\Repositories\CartRepository;
+use App\Models\Transaction;
 use App\Models\User;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Carbon\Carbon;
 use Exception;
+use Illuminate\Support\Facades\Log;
 
 /**
  * OrderService
@@ -33,6 +36,7 @@ class OrderService
     protected ProductBrandRepository $productBrandRepository;
     protected ServiceRepository $serviceRepository;
     protected CartRepository $cartRepository;
+    protected XenditService $xenditService;
 
     public function __construct(
         OrderRepository $orderRepository,
@@ -40,7 +44,8 @@ class OrderService
         BatchRepository $batchRepository,
         ProductBrandRepository $productBrandRepository,
         ServiceRepository $serviceRepository,
-        CartRepository $cartRepository
+        CartRepository $cartRepository,
+        XenditService $xenditService
     ) {
         $this->orderRepository = $orderRepository;
         $this->orderItemRepository = $orderItemRepository;
@@ -48,6 +53,7 @@ class OrderService
         $this->productBrandRepository = $productBrandRepository;
         $this->serviceRepository = $serviceRepository;
         $this->cartRepository = $cartRepository;
+        $this->xenditService = $xenditService;
     }
 
     /**
@@ -191,6 +197,18 @@ class OrderService
             }
             $this->orderItemRepository->insertMany($itemsData);
 
+            // Create payment invoice in Xendit so customer can continue to sandbox payment page.
+            $invoice = $this->xenditService->createInvoice($order->loadMissing('user'));
+
+            Transaction::create([
+                'order_id' => $order->id,
+                'transaction_code' => $invoice['external_id'],
+                'transaction_status' => $invoice['status'],
+                'payment_url' => $invoice['invoice_url'],
+                'gateway_response' => $invoice['raw'],
+                'created_at' => now(),
+            ]);
+
             DB::commit();
             return $this->getOrderById($order->id);
 
@@ -243,8 +261,8 @@ class OrderService
             }
 
             // Auto-assign the current staff member as the order handler
-            if (is_null($order->employee_id) && auth()->check()) {
-                $updateData['employee_id'] = auth()->id();
+            if (is_null($order->employee_id) && Auth::check()) {
+                $updateData['employee_id'] = Auth::id();
             }
 
             $order = $this->orderRepository->update($order, $updateData);
@@ -396,5 +414,60 @@ class OrderService
             $this->cartRepository->clearCart($cart->id);
             return $order;
         });
+    }
+
+    /**
+     * Fallback sync when webhook is delayed/failed:
+     * query Xendit by external_id and update local transaction/order state.
+     */
+    public function refreshPendingPaymentStatus(\App\Models\Order $order): void
+    {
+        $order->loadMissing('transaction');
+        $transaction = $order->transaction;
+
+        if (!$transaction || $transaction->transaction_code === '') {
+            return;
+        }
+
+        if (!in_array($transaction->transaction_status, ['pending', 'created'], true)) {
+            return;
+        }
+
+        try {
+            $invoice = $this->xenditService->getInvoiceByExternalId($transaction->transaction_code);
+            if (!$invoice) {
+                return;
+            }
+
+            DB::transaction(function () use ($order, $transaction, $invoice) {
+                $updates = [
+                    'transaction_status' => $invoice['status'],
+                    'gateway_response' => $invoice['raw'],
+                ];
+
+                if (!empty($invoice['invoice_url']) && empty($transaction->payment_url)) {
+                    $updates['payment_url'] = $invoice['invoice_url'];
+                }
+
+                if (in_array($invoice['status'], ['paid', 'settled'], true)) {
+                    $updates['paid_at'] = $transaction->paid_at ?? now();
+                }
+
+                $transaction->update($updates);
+
+                if (in_array($invoice['status'], ['paid', 'settled'], true) && $order->status === 'pending') {
+                    $order->update([
+                        'status' => 'processing',
+                        'paid_at' => $order->paid_at ?? now(),
+                    ]);
+                }
+            });
+        } catch (\Throwable $e) {
+            Log::warning('Gagal sinkronisasi fallback status Xendit', [
+                'order_id' => $order->id,
+                'transaction_code' => $transaction->transaction_code,
+                'message' => $e->getMessage(),
+            ]);
+        }
     }
 }

@@ -4,9 +4,12 @@ namespace App\Http\Controllers;
 
 use App\Models\Order;
 use App\Models\Product;
+use App\Models\Transaction;
 use App\Models\User;
 use Illuminate\Http\Request;
 use App\Services\OrderService;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 
 /**
  * OrderController (Root Namespace)
@@ -26,7 +29,7 @@ class OrderController extends Controller
 
     public function store(Request $request)
     {
-        if (!auth()->check()) {
+        if (!Auth::check()) {
             return redirect('/login')->with('error', 'Silakan login terlebih dahulu untuk melakukan checkout.');
         }
 
@@ -47,7 +50,7 @@ class OrderController extends Controller
         }
 
         $data = [
-            'user_id' => auth()->id(),
+            'user_id' => Auth::id(),
             'employee_id' => null,
             'note' => $request->note,
             'items' => $items,
@@ -56,7 +59,13 @@ class OrderController extends Controller
         try {
             $order = $this->orderService->createOrder($data);
             session()->forget('cart');
-            return redirect('/invoice/' . $order->id)->with('success', 'Pesanan berhasil dibuat.');
+
+            if ($order->transaction && $order->transaction->payment_url) {
+                return redirect()->away($order->transaction->payment_url);
+            }
+
+            return redirect('/invoice/' . $order->id)
+                ->with('error', 'Pesanan dibuat, tetapi link pembayaran Xendit belum tersedia. Silakan coba refresh invoice.');
         } catch (\Exception $e) {
             return back()->with('error', 'Gagal membuat pesanan: ' . $e->getMessage());
         }
@@ -82,11 +91,11 @@ class OrderController extends Controller
      */
     public function history()
     {
-        if (!auth()->check()) {
+        if (!Auth::check()) {
             return redirect('/login')->with('error', 'Silahkan login terlebih dahulu');
         }
 
-        $orders = Order::with('items')->where('user_id', auth()->id())->orderBy('created_at', 'desc')->get();
+        $orders = Order::with('items')->where('user_id', Auth::id())->orderBy('created_at', 'desc')->get();
         return view('customer.history', compact('orders'));
     }
 
@@ -98,19 +107,52 @@ class OrderController extends Controller
      */
     public function invoice($id)
     {
-        if (!auth()->check()) {
+        if (!Auth::check()) {
             return redirect('/login')->with('error', 'Silahkan login terlebih dahulu untuk melihat invoice.');
         }
 
         // Fetch the order with its related items, product, brand, service, and user
-        $order = Order::with('items.productBrand.product', 'items.productBrand.brand', 'items.service', 'user')
+        $order = Order::with('items.productBrand.product', 'items.productBrand.brand', 'items.service', 'user', 'transaction')
             ->findOrFail($id);
 
         // Enforce user ownership for regular members to prevent unauthorized access
-        if (auth()->user()->role === 'member' && $order->user_id !== auth()->id()) {
+        if (Auth::user()?->role === 'member' && $order->user_id !== Auth::id()) {
             abort(404);
         }
 
+        // Fallback reconciliation in case Xendit webhook has not updated local status yet.
+        $this->orderService->refreshPendingPaymentStatus($order);
+        $order->refresh()->load('transaction');
+
         return view('invoice.show', compact('order'));
+    }
+
+    public function simulatePayment(string $transactionCode)
+    {
+        if (!app()->environment('local')) {
+            abort(404);
+        }
+
+        $transaction = Transaction::where('transaction_code', $transactionCode)->with('order')->firstOrFail();
+
+        if (Auth::user()?->role === 'member' && $transaction->order?->user_id !== Auth::id()) {
+            abort(404);
+        }
+
+        DB::transaction(function () use ($transaction) {
+            $transaction->update([
+                'transaction_status' => 'paid',
+                'paid_at' => now(),
+            ]);
+
+            if ($transaction->order) {
+                $transaction->order->update([
+                    'status' => 'processing',
+                    'paid_at' => now(),
+                ]);
+            }
+        });
+
+        return redirect('/invoice/' . $transaction->order_id)->with('success', 'Simulasi pembayaran berhasil.');
     }
 }

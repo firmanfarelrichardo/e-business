@@ -10,7 +10,7 @@ class Order extends Model
 {
     use HasFactory, HasUuid;
 
-    public $timestamps = false;
+    public $timestamps = true;
 
     protected $fillable = [
         'order_number',

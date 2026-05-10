@@ -173,3 +173,6 @@ Route::post('/orders', [OrderController::class, 'store']);
 
 Route::get('/history', [OrderController::class, 'history']);
 Route::get('/invoice/{id}', [OrderController::class, 'invoice']);
+Route::get('/simulate-payment/{transactionCode}', [OrderController::class, 'simulatePayment'])
+    ->middleware('auth')
+    ->name('simulate.payment');

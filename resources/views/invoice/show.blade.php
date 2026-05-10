@@ -20,8 +20,9 @@
                 <div>
                     <p class="text-sm text-slate-500 mb-1">No. Order</p>
                     <h2 class="text-2xl font-bold text-slate-800">{{ $order->order_number }}</h2>
-                    <p class="text-sm font-semibold text-slate-600 mt-2">{{ $order->created_at->format('d M Y, H:i') }}
-                    </p>
+                    <p class="text-sm font-semibold text-slate-600 mt-2">
+                        {{ $order->created_at ? $order->created_at->format('d M Y, H:i') : 'Tanggal tidak tersedia' }}
+                    </p>                    </p>
                 </div>
                 <div class="mt-4 md:mt-0 text-right">
                     @if($order->status === 'pending')
@@ -85,11 +86,51 @@
                 <span class="text-3xl font-extrabold text-brand-dark tracking-tight">Rp
                     {{ number_format($order->total_price, 0, ',', '.') }}</span>
             </div>
-            @if($order->status == 'pending')
-                <div class="mt-8 bg-blue-50/50 border border-blue-100 rounded-xl p-4 text-center">
-                    <p class="text-blue-800 text-sm font-medium">Pembayaran akan dikelola melalui Xendit. (Fitur Integrasi
-                        Gateway Segera Hadir)</p>
+            @if($order->transaction)
+                <div class="mt-6 border-t border-white/40 pt-5">
+                    <div class="flex items-center justify-between mb-1">
+                        <span class="text-xs font-bold uppercase tracking-widest text-slate-400">Status Pembayaran</span>
+                        @php
+                            $ts = $order->transaction->transaction_status;
+                            $tsBadge = match($ts) {
+                                'paid', 'settled' => 'bg-green-100 text-green-700',
+                                'pending'         => 'bg-yellow-100 text-yellow-700',
+                                'expired'         => 'bg-red-100 text-red-600',
+                                'failed'          => 'bg-red-100 text-red-600',
+                                default           => 'bg-slate-100 text-slate-600',
+                            };
+                        @endphp
+                        <span class="text-xs font-bold px-3 py-1 rounded-full uppercase {{ $tsBadge }}">{{ strtoupper($ts) }}</span>
+                    </div>
+                    <p class="text-xs text-slate-400 mb-1">Kode: <span class="font-mono font-semibold text-slate-500">{{ $order->transaction->transaction_code }}</span></p>
                 </div>
+            @endif
+
+            @if($order->status == 'pending')
+                @if($order->transaction && $order->transaction->payment_url)
+                    <div class="mt-6 bg-blue-50/60 border border-blue-100 rounded-xl p-6 text-center">
+                        <p class="text-blue-800 text-sm font-medium mb-4">Selesaikan pembayaran Anda melalui halaman Xendit (pilihan VA, e-Wallet, QRIS tersedia).</p>
+                        <div class="flex flex-col sm:flex-row items-center justify-center gap-3">
+                            <a href="{{ $order->transaction->payment_url }}" target="_blank"
+                                class="inline-block bg-[#0256ba] hover:bg-[#024aa0] transition-colors text-white font-bold px-6 py-3 rounded-lg shadow-md">
+                                💳 Bayar Sekarang (Xendit)
+                            </a>
+                            {{-- Simulator: only shown in local APP_ENV for dev testing without Ngrok --}}
+                            @if(app()->environment('local'))
+                                <a href="{{ url('/simulate-payment/' . $order->transaction->transaction_code) }}"
+                                    onclick="return confirm('Simulasikan pembayaran berhasil? (Hanya untuk testing lokal)')"
+                                    class="inline-block bg-emerald-500 hover:bg-emerald-600 transition-colors text-white font-bold px-6 py-3 rounded-lg shadow-md">
+                                    🧪 Simulasi Bayar (Sandbox)
+                                </a>
+                            @endif
+                        </div>
+                    </div>
+                @elseif($order->transaction)
+                    <div class="mt-6 bg-yellow-50/60 border border-yellow-200 rounded-xl p-5 text-center">
+                        <p class="text-yellow-800 text-sm font-medium">Memproses link pembayaran… Silakan refresh halaman sebentar lagi.</p>
+                        <button onclick="window.location.reload()" class="mt-3 text-xs text-yellow-700 underline">Refresh Sekarang</button>
+                    </div>
+                @endif
             @endif
         </x-ui.glass-card>
     </div>
