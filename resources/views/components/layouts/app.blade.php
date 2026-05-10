@@ -281,21 +281,24 @@
         import { animate, inView, stagger } from "https://esm.sh/motion";
 
         // Generic entrance for cards and categories if present
-        inView(".glass-card, .grid > div, .motion-card", (info) => {
+        inView(".glass-card, .grid > div, .motion-card", (element) => {
             animate(
-                info.target,
+                element,
                 { y: [30, 0], opacity: [0, 1] },
                 { duration: 0.6, easing: [0.17, 0.55, 0.55, 1] }
             );
         });
 
         // Specific entrance for generic catalog wrappers
-        inView(".max-w-7xl", (info) => {
-            animate(
-                info.target.querySelectorAll("h1, h2, h3, h4"),
-                { y: [20, 0], opacity: [0, 1] },
-                { duration: 0.5, delay: stagger(0.1) }
-            );
+        inView(".max-w-7xl", (element) => {
+            const children = element.querySelectorAll("h1, h2, h3, h4");
+            if (children.length > 0) {
+                animate(
+                    children,
+                    { y: [20, 0], opacity: [0, 1] },
+                    { duration: 0.5, delay: stagger(0.1) }
+                );
+            }
         });
 
     </script>
