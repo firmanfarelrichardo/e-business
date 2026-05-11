@@ -405,11 +405,7 @@
                                     alt="Workspace"
                                     class="relative z-10 w-[85%] h-[85%] object-cover rounded-[2rem] shadow-2xl border border-white/50">
                                 <!-- Floating small element -->
-                                <div
-                                    class="absolute -bottom-6 -left-6 z-20 glass-card p-4 rounded-xl flex items-center gap-3 backdrop-blur-xl">
-                                    <div class="w-3 h-3 bg-green-500 rounded-full animate-bounce"></div>
-                                    <span class="font-bold text-brand-dark text-sm">Sistem Cetak Online</span>
-                                </div>
+                                
                             </div>
                         </div>
                     </div>
