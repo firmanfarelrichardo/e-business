@@ -116,7 +116,7 @@ class CatalogController extends Controller
         // Fallback for categories if empty
         $categories = [];
         if (empty($categories)) {
-            $categories = [['name' => 'Kategori Jasa (Semua)', 'url' => '#']];
+            $categories = [['name' => '', 'url' => '#']];
         }
 
         return view('jasa.index', compact('categories', 'dbServices'));

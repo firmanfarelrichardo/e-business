@@ -4,11 +4,10 @@
 
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-8">
 
-        <!-- Breadcrumb & Subcategory (for Jasa) -->
-        <x-catalog.sub-category title="Layanan Percetakan Digital" :icon="'<svg class=\'w-6 h-6\' fill=\'none\' stroke=\'currentColor\' viewBox=\'0 0 24 24\'><path stroke-linecap=\'round\' stroke-linejoin=\'round\' stroke-width=\'2\' d=\'M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z\'></path></svg>'" :subcategories="['Print Hitam Putih', 'Print Warna', 'Print Kertas Khusus', 'Laminasi']" />
+    
 
         <div class="mt-8 mb-16 text-center lg:text-left">
-            <h1 class="text-3xl font-bold text-slate-800 mb-4">Percetakan Dokumen Cepat & Presisi</h1>
+            <h1 class="text-3xl font-bold text-slate-800 mb-4">Percetakan Dokumen</h1>
             <p class="text-slate-600 max-w-3xl">Pilih spesifikasi pencetakan yang Anda butuhkan. Kami menggunakan mesin
                 beresolusi tinggi untuk menjamin hasil teks yang tajam dan warna yang akurat sesuai standar perusahaan.
             </p>

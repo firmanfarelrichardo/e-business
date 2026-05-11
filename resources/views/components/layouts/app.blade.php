@@ -35,6 +35,9 @@
         }
     </script>
 
+    <!-- Alpine.js for UI Interactivity -->
+    <script defer src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
+
     <style>
         /* Base Styles */
         body {
@@ -100,10 +103,14 @@
             -ms-overflow-style: none;
             scrollbar-width: none;
         }
+
+        [x-cloak] {
+            display: none !important;
+        }
     </style>
 </head>
 
-<body class="text-slate-800 antialiased flex flex-col min-h-screen relative overflow-x-hidden">
+<body class="text-slate-800 antialiased flex flex-col min-h-screen relative overflow-x-hidden" x-data="{ mobileMenuOpen: false }">
 
     <!-- Navbar -->
     <div class="fixed w-full z-50 top-0 px-0 sm:top-4 sm:px-4 print:hidden">
@@ -181,14 +188,62 @@
                 @endauth
 
                 <!-- Mobile menu button -->
-                <button class="md:hidden text-slate-700 hover:text-brand-primary focus:outline-none p-1">
-                    <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <button class="md:hidden text-slate-700 hover:text-brand-primary focus:outline-none p-1" @click="mobileMenuOpen = !mobileMenuOpen">
+                    <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" x-show="!mobileMenuOpen">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
                             d="M4 6h16M4 12h16M4 18h16" />
+                    </svg>
+                    <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" x-show="mobileMenuOpen" x-cloak>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
                     </svg>
                 </button>
             </div>
         </nav>
+
+        <!-- Mobile Menu Overlay -->
+        <div x-show="mobileMenuOpen" 
+             x-transition:enter="transition ease-out duration-300"
+             x-transition:enter-start="opacity-0 -translate-y-4"
+             x-transition:enter-end="opacity-100 translate-y-0"
+             x-transition:leave="transition ease-in duration-200"
+             x-transition:leave-start="opacity-100 translate-y-0"
+             x-transition:leave-end="opacity-0 -translate-y-4"
+             class="md:hidden mt-2 mx-4 glass-card rounded-2xl overflow-hidden shadow-2xl border border-white/50"
+             x-cloak>
+            <div class="flex flex-col p-4 space-y-1">
+                <a href="{{ url('/katalog') }}" class="px-4 py-3 text-slate-700 hover:bg-brand-primary/10 hover:text-brand-primary rounded-xl font-semibold transition">Katalog ATK</a>
+                <a href="{{ url('/jasa') }}" class="px-4 py-3 text-slate-700 hover:bg-brand-primary/10 hover:text-brand-primary rounded-xl font-semibold transition">Jasa Cetak</a>
+                <a href="{{ url('/history') }}" class="px-4 py-3 text-slate-700 hover:bg-brand-primary/10 hover:text-brand-primary rounded-xl font-semibold transition">Lacak Pesanan</a>
+                
+                <div class="border-t border-slate-100 my-2 pt-2">
+                    @auth
+                        @if(auth()->user()->role === 'member')
+                            <a href="{{ route('profile') }}" class="px-4 py-3 text-slate-700 hover:bg-brand-primary/10 hover:text-brand-primary rounded-xl font-semibold transition flex items-center gap-2">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>
+                                Profil Saya
+                            </a>
+                        @else
+                            <a href="{{ url('/dashboard') }}" class="px-4 py-3 text-slate-700 hover:bg-brand-primary/10 hover:text-brand-primary rounded-xl font-semibold transition flex items-center gap-2">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
+                                Dashboard
+                            </a>
+                        @endif
+                        <form method="POST" action="{{ route('logout') }}" class="px-4 py-3">
+                            @csrf
+                            <button type="submit" class="w-full text-left text-red-500 font-semibold flex items-center gap-2">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg>
+                                Keluar
+                            </button>
+                        </form>
+                    @else
+                        <a href="{{ url('/login') }}" class="px-4 py-3 text-brand-primary font-bold transition flex items-center gap-2">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg>
+                            Masuk Ke Akun
+                        </a>
+                    @endauth
+                </div>
+            </div>
+        </div>
     </div>
 
     <!-- Main Content Area -->
