@@ -23,9 +23,9 @@ class XenditService
         return rtrim((string) config('xendit.base_url', 'https://api.xendit.co'), '/');
     }
 
-    protected function appBaseUrl(): string
+    protected function publicBaseUrl(): string
     {
-        return rtrim((string) config('app.url', 'http://localhost:8000'), '/');
+        return rtrim((string) config('xendit.public_url', config('app.url', 'http://localhost:8000')), '/');
     }
 
     /**
@@ -44,8 +44,8 @@ class XenditService
             'description' => 'Pembayaran untuk order ' . $order->order_number,
             'currency' => 'IDR',
             'invoice_duration' => 86400,
-            'success_redirect_url' => $this->appBaseUrl() . '/invoice/' . $order->id,
-            'failure_redirect_url' => $this->appBaseUrl() . '/invoice/' . $order->id,
+            'success_redirect_url' => $this->publicBaseUrl() . '/invoice/' . $order->id,
+            'failure_redirect_url' => $this->publicBaseUrl() . '/invoice/' . $order->id,
         ];
 
         if (!empty($order->user?->email)) {
