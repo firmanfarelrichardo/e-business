@@ -7,50 +7,34 @@
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>{{ isset($initialMode) && $initialMode === 'register' ? 'Daftar — ' : 'Masuk — ' }}Sinergi e-Business</title>
 
-    <!-- Fonts -->
+    {{-- No-flash theme script --}}
+    <script>
+        (function() {
+            var t = localStorage.getItem('sinergi_theme') ||
+                    (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light');
+            document.documentElement.setAttribute('data-theme', t);
+        })();
+    </script>
+
+    {{-- Fonts --}}
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link
-        href="https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,300;0,14..32,400;0,14..32,500;0,14..32,600;0,14..32,700;0,14..32,800;1,14..32,300&display=swap"
-        rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Manrope:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+
+    {{-- Vite compiled CSS --}}
+    @vite(['resources/css/app.css', 'resources/js/app.js'])
 
     <style>
-        /* ═══════════════════════════════════════════
-           SAGE COLOR PALETTE
-        ═══════════════════════════════════════════ */
-        *,
-        *::before,
-        *::after {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-        }
-
+        /* ══════════════════════════════════════════
+           AUTH-SPECIFIC STYLES (scoped to this page)
+        ══════════════════════════════════════════ */
         :root {
-            --sage-primary: #96A78D;
-            --sage-secondary: #B6CEB4;
-            --sage-tertiary: #D9E9CF;
-            --sage-light: #F0F0F0;
-            --sage-dark: #5A6852;
-            --sage-deeper: #3d4a38;
-            --sage-accent: #7B9B6F;
-            --shadow-sage: rgba(90, 104, 82, 0.45);
-
-            /* split-panel transition */
             --dur: 750ms;
             --ease: cubic-bezier(0.77, 0, 0.175, 1);
         }
 
-        html,
-        body {
-            height: 100%;
-            font-family: 'Inter', ui-sans-serif, system-ui, sans-serif;
-            overflow: hidden;
-        }
+        html, body { height: 100%; overflow: hidden; }
 
-        /* ══════════════════════════════════════════
-           FULL-PAGE OUTER SHELL
-        ══════════════════════════════════════════ */
         .auth-shell {
             position: relative;
             width: 100vw;
@@ -58,28 +42,25 @@
             display: flex;
             align-items: center;
             justify-content: center;
-            background: #1a2118;
+            background: var(--night-800, #06091c);
             overflow: hidden;
         }
 
-        /* Subtle ambient particles */
         .shell-bg {
             position: absolute;
             inset: 0;
             background:
-                radial-gradient(ellipse 60% 60% at 20% 80%, rgba(90, 104, 82, .25) 0%, transparent 65%),
-                radial-gradient(ellipse 40% 80% at 90% 15%, rgba(150, 167, 141, .12) 0%, transparent 60%);
+                radial-gradient(ellipse 60% 60% at 20% 80%, rgba(30,133,251,.18) 0%, transparent 65%),
+                radial-gradient(ellipse 40% 80% at 90% 15%, rgba(124,92,255,.12) 0%, transparent 60%);
         }
 
-        /* ══════════════════════════════════════════
-           AUTH CARD — oversized rounded panel
-        ══════════════════════════════════════════ */
+        /* ── AUTH CARD ── */
         .auth-card {
             position: relative;
             z-index: 10;
             width: min(1040px, 96vw);
             height: min(640px, 92vh);
-            border-radius: 2rem;
+            border-radius: var(--radius-2xl, 2rem);
             overflow: hidden;
             box-shadow:
                 0 40px 100px rgba(0, 0, 0, 0.55),
@@ -87,32 +68,21 @@
             display: flex;
         }
 
-        /* ══════════════════════════════════════════
-           BRANDING PANEL (left → right on register)
-        ══════════════════════════════════════════ */
+        /* ── BRANDING PANEL ── */
         .brand-panel {
             position: absolute;
-            top: 0;
-            bottom: 0;
-            left: 0;
+            top: 0; bottom: 0; left: 0;
             width: 46%;
             overflow: hidden;
             z-index: 20;
-            transition:
-                left var(--dur) var(--ease),
-                border-radius var(--dur) var(--ease);
+            transition: left var(--dur) var(--ease), border-radius var(--dur) var(--ease);
         }
 
-        /* When register is active → brand slides to right side */
-        .auth-card.show-register .brand-panel {
-            left: 54%;
-        }
+        .auth-card.show-register .brand-panel { left: 54%; }
 
-        /* Corporate background */
         .brand-img {
-            position: absolute;
-            inset: 0;
-            background: linear-gradient(135deg, #7B9B6F, #5A6852, #96A78D, #B6CEB4);
+            position: absolute; inset: 0;
+            background: linear-gradient(135deg, var(--night-700, #190900), var(--night-600, #451A03), var(--accent-violet, #F59E0B), var(--accent-cyan, #FBBF24));
             background-size: 400% 400%;
             animation: gradientAnim 15s ease infinite;
             opacity: 0.9;
@@ -121,731 +91,341 @@
         }
 
         @keyframes gradientAnim {
-            0% {
-                background-position: 0% 50%;
-            }
-
-            50% {
-                background-position: 100% 50%;
-            }
-
-            100% {
-                background-position: 0% 50%;
-            }
+            0%   { background-position: 0% 50%; }
+            50%  { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
         }
 
-        .auth-card.show-register .brand-panel .brand-img {
-            transform: scale(1);
-        }
+        .auth-card.show-register .brand-panel .brand-img { transform: scale(1); }
 
-        /* Color overlay on top of image */
         .brand-overlay {
-            position: absolute;
-            inset: 0;
-            background: linear-gradient(145deg,
-                    var(--sage-deeper) 0%,
-                    var(--sage-dark) 55%,
-                    #2e3829 100%);
-            opacity: 0.88;
+            position: absolute; inset: 0;
+            background: linear-gradient(145deg, var(--night-800, #06091c) 0%, var(--night-700, #0b1530) 55%, rgba(11,21,48,0.9) 100%);
+            opacity: 0.82;
         }
 
-        /* Decorative topographic lines SVG overlay */
         .brand-topo {
-            position: absolute;
-            inset: 0;
-            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='600' height='640'%3E%3Cg fill='none' stroke='rgba(255,255,255,0.07)' stroke-width='1.2'%3E%3Cellipse cx='300' cy='320' rx='260' ry='200'/%3E%3Cellipse cx='300' cy='320' rx='200' ry='150'/%3E%3Cellipse cx='300' cy='320' rx='140' ry='100'/%3E%3Cellipse cx='300' cy='320' rx='80' ry='55'/%3E%3Cellipse cx='160' cy='150' rx='110' ry='80'/%3E%3Cellipse cx='160' cy='150' rx='70' ry='50'/%3E%3C/g%3E%3C/svg%3E");
+            position: absolute; inset: 0;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='600' height='640'%3E%3Cg fill='none' stroke='rgba(255,255,255,0.05)' stroke-width='1.2'%3E%3Cellipse cx='300' cy='320' rx='260' ry='200'/%3E%3Cellipse cx='300' cy='320' rx='200' ry='150'/%3E%3Cellipse cx='300' cy='320' rx='140' ry='100'/%3E%3Cellipse cx='300' cy='320' rx='80' ry='55'/%3E%3Cellipse cx='160' cy='150' rx='110' ry='80'/%3E%3Cellipse cx='160' cy='150' rx='70' ry='50'/%3E%3C/g%3E%3C/svg%3E");
             background-size: cover;
-            background-position: center;
-            opacity: 1;
         }
 
-        /* Floating blobs */
-        .brand-blob {
-            position: absolute;
-            border-radius: 50%;
-            filter: blur(80px);
-        }
+        .brand-blob { position: absolute; border-radius: 50%; filter: blur(80px); }
 
         .brand-blob-1 {
-            width: 260px;
-            height: 260px;
-            background: var(--sage-primary);
-            top: -80px;
-            left: -80px;
-            opacity: 0.35;
+            width: 260px; height: 260px;
+            background: var(--accent-violet, #F59E0B);
+            top: -80px; left: -80px;
+            opacity: 0.3;
             animation: blobDrift 14s ease-in-out infinite alternate;
         }
 
         .brand-blob-2 {
-            width: 200px;
-            height: 200px;
-            background: var(--sage-secondary);
-            bottom: -60px;
-            right: -40px;
-            opacity: 0.28;
+            width: 200px; height: 200px;
+            background: var(--accent-cyan, #22d3ee);
+            bottom: -60px; right: -40px;
+            opacity: 0.2;
             animation: blobDrift2 10s ease-in-out infinite alternate;
         }
 
-        @keyframes blobDrift {
-            0% {
-                transform: translate(0, 0) scale(1)
-            }
+        @keyframes blobDrift  { 0% { transform: translate(0, 0) scale(1); } 100% { transform: translate(20px, -30px) scale(1.1); } }
+        @keyframes blobDrift2 { 0% { transform: translate(0, 0) scale(1); } 100% { transform: translate(-15px, 20px) scale(1.08); } }
 
-            100% {
-                transform: translate(20px, -30px) scale(1.1)
-            }
-        }
-
-        @keyframes blobDrift2 {
-            0% {
-                transform: translate(0, 0) scale(1)
-            }
-
-            100% {
-                transform: translate(-15px, 20px) scale(1.08)
-            }
-        }
-
-        /* Brand panel content */
         .brand-content {
-            position: relative;
-            z-index: 5;
+            position: relative; z-index: 5;
             height: 100%;
-            display: flex;
-            flex-direction: column;
+            display: flex; flex-direction: column;
             justify-content: space-between;
             padding: 2.5rem 2.25rem;
             color: #fff;
         }
 
-        .brand-logo {
-            display: flex;
-            align-items: center;
-            gap: 0.625rem;
-        }
+        .brand-logo { display: flex; align-items: center; gap: 0.625rem; }
 
         .brand-logo-badge {
-            width: 2.5rem;
-            height: 2.5rem;
-            border-radius: 0.875rem;
-            background: linear-gradient(135deg, var(--sage-primary), var(--sage-secondary));
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            box-shadow: 0 4px 16px var(--shadow-sage);
+            width: 2.5rem; height: 2.5rem;
+            border-radius: var(--radius-md, 0.875rem);
+            background: linear-gradient(135deg, var(--accent-violet, #F59E0B), var(--accent-cyan, #22d3ee));
+            display: flex; align-items: center; justify-content: center;
+            box-shadow: 0 4px 16px rgba(124,92,255,0.35);
         }
 
-        .brand-logo-text {
-            font-size: 1.2rem;
-            font-weight: 800;
-            letter-spacing: -0.02em;
-            color: #fff;
-        }
+        .brand-logo-text { font-size: 1.2rem; font-weight: 800; letter-spacing: -0.02em; color: #fff; font-family: var(--font-display); }
+        .brand-logo-text span { background: linear-gradient(135deg, var(--accent-cyan), var(--accent-mint)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
 
-        .brand-logo-text span {
-            color: var(--sage-tertiary);
-        }
-
-        .brand-headline {
-            padding-bottom: 0.5rem;
-        }
-
+        .brand-headline { padding-bottom: 0.5rem; }
         .brand-headline h2 {
             font-size: clamp(1.6rem, 2.4vw, 2.1rem);
-            font-weight: 800;
-            letter-spacing: -0.03em;
-            line-height: 1.18;
-            margin-bottom: 0.85rem;
+            font-weight: 800; letter-spacing: -0.03em;
+            line-height: 1.18; margin-bottom: 0.85rem;
+            font-family: var(--font-display);
         }
-
         .brand-headline h2 span {
             display: block;
-            background: linear-gradient(90deg, var(--sage-tertiary), var(--sage-secondary));
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
+            background: linear-gradient(90deg, var(--accent-cyan), var(--accent-mint));
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
             background-clip: text;
         }
+        .brand-headline p { font-size: 0.875rem; color: rgba(255,255,255,0.55); font-weight: 300; line-height: 1.65; max-width: 26ch; }
 
-        .brand-headline p {
-            font-size: 0.875rem;
-            color: rgba(255, 255, 255, 0.55);
-            font-weight: 300;
-            line-height: 1.65;
-            max-width: 26ch;
-        }
-
-        /* Panel-specific messages for login/register */
         .brand-msg {
             transition: opacity var(--dur) var(--ease), transform var(--dur) var(--ease);
         }
+        .brand-msg.for-login { opacity: 1; transform: translateY(0); }
+        .brand-msg.for-register { position: absolute; opacity: 0; transform: translateY(20px); pointer-events: none; }
+        .auth-card.show-register .brand-msg.for-login { opacity: 0; transform: translateY(-16px); }
+        .auth-card.show-register .brand-msg.for-register { opacity: 1; transform: translateY(0); pointer-events: auto; }
 
-        .brand-msg.for-login {
-            opacity: 1;
-            transform: translateY(0);
-        }
+        .brand-footer { font-size: 0.72rem; color: rgba(255,255,255,0.28); }
+        .brand-deco { position: absolute; color: rgba(255,255,255,0.1); font-size: 1.1rem; letter-spacing: 4px; user-select: none; }
+        .brand-deco.top-right { top: 2rem; right: 1.75rem; }
+        .brand-deco.mid-left { top: 45%; left: 1.75rem; }
 
-        .brand-msg.for-register {
-            position: absolute;
-            opacity: 0;
-            transform: translateY(20px);
-            pointer-events: none;
-        }
-
-        .auth-card.show-register .brand-msg.for-login {
-            opacity: 0;
-            transform: translateY(-16px);
-        }
-
-        .auth-card.show-register .brand-msg.for-register {
-            opacity: 1;
-            transform: translateY(0);
-            pointer-events: auto;
-        }
-
-        .brand-footer {
-            font-size: 0.72rem;
-            color: rgba(255, 255, 255, 0.28);
-        }
-
-        /* Decorative dots/plus signs */
-        .brand-deco {
-            position: absolute;
-            color: rgba(255, 255, 255, 0.15);
-            font-size: 1.1rem;
-            letter-spacing: 4px;
-            user-select: none;
-        }
-
-        .brand-deco.top-right {
-            top: 2rem;
-            right: 1.75rem;
-        }
-
-        .brand-deco.mid-left {
-            top: 45%;
-            left: 1.75rem;
-        }
-
-        /* ══════════════════════════════════════════
-           FORM PANEL (right → left on register)
-        ══════════════════════════════════════════ */
+        /* ── FORM PANEL ── */
         .form-side {
             position: absolute;
-            top: 0;
-            bottom: 0;
-            left: 46%;
-            width: 54%;
-            height: 100%;
-            background: #fff;
-            display: flex;
-            flex-direction: column;
+            top: 0; bottom: 0; left: 46%;
+            width: 54%; height: 100%;
+            background: var(--color-bg, #f8faff);
+            display: flex; flex-direction: column;
             justify-content: center;
             overflow: hidden;
             transition: left var(--dur) var(--ease);
         }
 
-        /* On register, form slides to the left */
-        .auth-card.show-register .form-side {
-            left: 0;
-        }
+        .auth-card.show-register .form-side { left: 0; }
 
-        /* The form panels use an internal slider track */
         .form-track {
-            display: flex;
-            width: 200%;
-            height: 100%;
+            display: flex; width: 200%; height: 100%;
             transform: translateX(0);
             transition: transform var(--dur) var(--ease);
             will-change: transform;
         }
 
-        .auth-card.show-register .form-track {
-            transform: translateX(-50%);
-        }
+        .auth-card.show-register .form-track { transform: translateX(-50%); }
 
         .form-panel {
-            width: 50%;
-            height: 100%;
+            width: 50%; height: 100%;
             padding: 2.5rem 3rem;
-            display: flex;
-            flex-direction: column;
+            display: flex; flex-direction: column;
             justify-content: center;
-            overflow-y: auto;
-            flex-shrink: 0;
-            /* Parallax fade */
-            transition:
-                opacity var(--dur) var(--ease),
-                transform var(--dur) var(--ease);
+            overflow-y: auto; flex-shrink: 0;
+            transition: opacity var(--dur) var(--ease), transform var(--dur) var(--ease);
         }
 
-        /* Login form panel */
-        .form-panel.fp-login {
-            opacity: 1;
-            transform: translateX(0);
-        }
+        .form-panel.fp-login { opacity: 1; transform: translateX(0); }
+        .auth-card.show-register .form-panel.fp-login { opacity: 0; transform: translateX(5%); }
+        .form-panel.fp-register { opacity: 0; transform: translateX(-5%); }
+        .auth-card.show-register .form-panel.fp-register { opacity: 1; transform: translateX(0); }
 
-        .auth-card.show-register .form-panel.fp-login {
-            opacity: 0;
-            transform: translateX(5%);
-        }
-
-        /* Register form panel */
-        .form-panel.fp-register {
-            opacity: 0;
-            transform: translateX(-5%);
-        }
-
-        .auth-card.show-register .form-panel.fp-register {
-            opacity: 1;
-            transform: translateX(0);
-        }
-
-        /* ── Panel heading ── */
-        .fp-heading {
-            margin-bottom: 1.6rem;
-        }
-
+        .fp-heading { margin-bottom: 1.6rem; }
         .fp-heading h1 {
             font-size: clamp(1.4rem, 2vw, 1.75rem);
-            font-weight: 800;
-            letter-spacing: -0.03em;
-            color: var(--sage-deeper);
-            line-height: 1.18;
-            margin-bottom: 0.4rem;
+            font-weight: 800; letter-spacing: -0.03em;
+            color: var(--color-text);
+            line-height: 1.18; margin-bottom: 0.4rem;
+            font-family: var(--font-display);
         }
-
-        .fp-heading p {
-            font-size: 0.82rem;
-            color: #8a9386;
-            font-weight: 400;
-        }
-
-        .fp-heading p a,
-        .fp-heading p button {
-            color: var(--sage-dark);
-            font-weight: 600;
-            cursor: pointer;
-            background: none;
-            border: none;
-            font-family: inherit;
-            font-size: inherit;
-            text-decoration: underline;
-            text-underline-offset: 2px;
-            padding: 0;
+        .fp-heading p { font-size: 0.82rem; color: var(--color-text-muted); font-weight: 400; }
+        .fp-heading p a, .fp-heading p button {
+            color: var(--color-primary, #D97706);
+            font-weight: 600; cursor: pointer;
+            background: none; border: none; font-family: inherit; font-size: inherit;
+            text-decoration: underline; text-underline-offset: 2px; padding: 0;
             transition: color 0.2s;
         }
+        .fp-heading p a:hover, .fp-heading p button:hover { color: var(--accent-violet); }
 
-        .fp-heading p a:hover,
-        .fp-heading p button:hover {
-            color: var(--sage-accent);
-        }
+        /* ── FORM FIELDS ── */
+        .form-fields { display: flex; flex-direction: column; gap: 0.9rem; }
 
-        /* ── Form fields ── */
-        .form-fields {
-            display: flex;
-            flex-direction: column;
-            gap: 0.9rem;
-        }
-
-        .field-group {
-            display: flex;
-            flex-direction: column;
-            gap: 0.3rem;
-        }
-
+        .field-group { display: flex; flex-direction: column; gap: 0.3rem; }
         .field-label {
-            font-size: 0.72rem;
-            font-weight: 600;
-            color: #6b7b64;
-            letter-spacing: 0.06em;
-            text-transform: uppercase;
+            font-size: 0.72rem; font-weight: 600;
+            color: var(--color-text-muted);
+            letter-spacing: 0.06em; text-transform: uppercase;
+            font-family: var(--font-display);
         }
-
-        .field-wrap {
-            position: relative;
-            display: flex;
-            align-items: center;
-        }
+        .field-wrap { position: relative; display: flex; align-items: center; }
 
         .field-icon {
-            position: absolute;
-            left: 0.875rem;
-            color: #a8b6a2;
-            pointer-events: none;
-            transition: color 0.25s;
-            flex-shrink: 0;
+            position: absolute; left: 0.875rem;
+            color: var(--color-text-muted);
+            pointer-events: none; transition: color 0.25s; flex-shrink: 0;
         }
-
-        .field-icon svg {
-            width: 0.95rem;
-            height: 0.95rem;
-            display: block;
-        }
+        .field-icon svg { width: 0.95rem; height: 0.95rem; display: block; }
 
         .field-input {
             width: 100%;
             padding: 0.7rem 0.875rem 0.7rem 2.5rem;
-            background: #f6f8f5;
-            border: 1.5px solid #e2e8df;
-            border-radius: 0.75rem;
-            color: var(--sage-deeper);
-            font-size: 0.875rem;
-            font-family: inherit;
-            font-weight: 400;
+            background: var(--color-bg-sunken);
+            border: 1.5px solid var(--color-border);
+            border-radius: var(--radius-sm, 0.75rem);
+            color: var(--color-text);
+            font-size: 0.875rem; font-family: inherit; font-weight: 400;
             outline: none;
             transition: border-color 0.25s, background 0.25s, box-shadow 0.25s;
         }
-
-        .field-input::placeholder {
-            color: #b8c4b3;
-        }
-
+        .field-input::placeholder { color: var(--color-text-muted); opacity: 0.6; }
         .field-input:focus {
-            background: #fff;
-            border-color: var(--sage-primary);
-            box-shadow: 0 0 0 3px rgba(150, 167, 141, 0.18);
+            background: var(--color-bg-elevated);
+            border-color: var(--color-primary, #D97706);
+            box-shadow: 0 0 0 3px rgba(30,133,251,0.18);
         }
+        .field-wrap:focus-within .field-icon { color: var(--color-primary); }
 
-        .field-wrap:focus-within .field-icon {
-            color: var(--sage-primary);
-        }
-
-        /* Password toggle */
         .toggle-pw {
-            position: absolute;
-            right: 0.875rem;
-            background: none;
-            border: none;
-            cursor: pointer;
-            color: #b8c4b3;
-            padding: 0;
-            display: flex;
-            align-items: center;
-            transition: color 0.2s;
+            position: absolute; right: 0.875rem;
+            background: none; border: none; cursor: pointer;
+            color: var(--color-text-muted); padding: 0;
+            display: flex; align-items: center; transition: color 0.2s;
         }
+        .toggle-pw:hover { color: var(--color-primary); }
+        .toggle-pw svg { width: 0.95rem; height: 0.95rem; }
+        .field-input.has-toggle { padding-right: 2.5rem; }
 
-        .toggle-pw:hover {
-            color: var(--sage-primary);
-        }
-
-        .toggle-pw svg {
-            width: 0.95rem;
-            height: 0.95rem;
-        }
-
-        .field-input.has-toggle {
-            padding-right: 2.5rem;
-        }
-
-        /* ── Error ── */
+        /* ── Error / Alert ── */
         .field-error {
-            font-size: 0.7rem;
-            color: #e05252;
-            font-weight: 500;
-            display: none;
-            animation: shakeErr 0.4s ease;
+            font-size: 0.7rem; color: var(--accent-rose, #f43f5e);
+            font-weight: 500; display: none; animation: shakeErr 0.4s ease;
         }
+        .field-error.visible { display: block; }
 
-        .field-error.visible {
-            display: block;
-        }
+        @keyframes shakeErr { 0%,100%{transform:translateX(0)} 20%,60%{transform:translateX(-4px)} 40%,80%{transform:translateX(4px)} }
 
-        @keyframes shakeErr {
-
-            0%,
-            100% {
-                transform: translateX(0)
-            }
-
-            20%,
-            60% {
-                transform: translateX(-4px)
-            }
-
-            40%,
-            80% {
-                transform: translateX(4px)
-            }
-        }
-
-        /* ── Alert banner ── */
         .alert-banner {
             padding: 0.6rem 0.875rem;
-            border-radius: 0.65rem;
-            font-size: 0.78rem;
-            font-weight: 500;
-            margin-bottom: 0.4rem;
-            display: none;
-            animation: fadeSlide 0.3s ease;
+            border-radius: var(--radius-sm); font-size: 0.78rem; font-weight: 500;
+            margin-bottom: 0.4rem; display: none; animation: fadeSlide 0.3s ease;
         }
-
-        @keyframes fadeSlide {
-            from {
-                opacity: 0;
-                transform: translateY(-8px);
-            }
-
-            to {
-                opacity: 1;
-                transform: translateY(0);
-            }
-        }
+        @keyframes fadeSlide { from { opacity:0; transform:translateY(-8px); } to { opacity:1; transform:translateY(0); } }
 
         .alert-error {
-            background: rgba(224, 82, 82, 0.1);
-            border: 1px solid rgba(224, 82, 82, 0.3);
-            color: #c53030;
-            display: flex;
-            align-items: center;
-            gap: 0.45rem;
+            background: rgba(244,63,94,0.1); border: 1px solid rgba(244,63,94,0.3); color: var(--accent-rose);
+            display: flex; align-items: center; gap: 0.45rem;
         }
-
         .alert-success {
-            background: rgba(150, 167, 141, 0.14);
-            border: 1px solid rgba(150, 167, 141, 0.35);
-            color: var(--sage-dark);
-            display: flex;
-            align-items: center;
-            gap: 0.45rem;
+            background: rgba(34,211,238,0.1); border: 1px solid rgba(34,211,238,0.3); color: var(--accent-teal);
+            display: flex; align-items: center; gap: 0.45rem;
         }
 
         /* ── Submit button ── */
         .btn-submit {
-            position: relative;
-            width: 100%;
+            position: relative; width: 100%;
             padding: 0.82rem 1.5rem;
-            background: linear-gradient(135deg, var(--sage-dark) 0%, var(--sage-deeper) 100%);
-            border: none;
-            border-radius: 0.75rem;
-            color: #fff;
-            font-size: 0.9rem;
-            font-weight: 700;
-            font-family: inherit;
-            cursor: pointer;
-            overflow: hidden;
+            background: linear-gradient(135deg, var(--accent-violet, #F59E0B), var(--gold-600, #D97706));
+            border: none; border-radius: var(--radius-sm);
+            color: #fff; font-size: 0.9rem; font-weight: 700;
+            font-family: var(--font-display); cursor: pointer; overflow: hidden;
             transition: transform 0.2s, box-shadow 0.2s, opacity 0.2s;
-            box-shadow: 0 4px 18px rgba(61, 74, 56, 0.35);
+            box-shadow: 0 4px 18px rgba(124,92,255,0.35);
             margin-top: 0.35rem;
         }
+        .btn-submit:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 8px 28px rgba(124,92,255,0.45); }
+        .btn-submit:active:not(:disabled) { transform: translateY(0); }
+        .btn-submit:disabled { opacity: 0.6; cursor: not-allowed; }
 
-        .btn-submit:hover:not(:disabled) {
-            transform: translateY(-2px);
-            box-shadow: 0 8px 28px rgba(61, 74, 56, 0.45);
-        }
-
-        .btn-submit:active:not(:disabled) {
-            transform: translateY(0);
-        }
-
-        .btn-submit:disabled {
-            opacity: 0.6;
-            cursor: not-allowed;
-        }
-
-        /* Ripple */
         .btn-submit .ripple {
-            position: absolute;
-            border-radius: 50%;
-            background: rgba(255, 255, 255, 0.3);
-            transform: scale(0);
-            animation: rippleAnim 0.55s linear;
-            pointer-events: none;
+            position: absolute; border-radius: 50%;
+            background: rgba(255,255,255,0.3);
+            transform: scale(0); animation: rippleAnim 0.55s linear; pointer-events: none;
         }
+        @keyframes rippleAnim { to { transform: scale(4); opacity: 0; } }
 
-        @keyframes rippleAnim {
-            to {
-                transform: scale(4);
-                opacity: 0;
-            }
-        }
-
-        /* Spinner */
         .btn-spinner {
-            display: none;
-            width: 1rem;
-            height: 1rem;
-            border: 2px solid rgba(255, 255, 255, 0.35);
-            border-top-color: #fff;
-            border-radius: 50%;
-            animation: spin 0.7s linear infinite;
-            margin: 0 auto;
+            display: none; width: 1rem; height: 1rem;
+            border: 2px solid rgba(255,255,255,0.35);
+            border-top-color: #fff; border-radius: 50%;
+            animation: spin 0.7s linear infinite; margin: 0 auto;
         }
+        @keyframes spin { to { transform: rotate(360deg); } }
 
-        @keyframes spin {
-            to {
-                transform: rotate(360deg);
-            }
-        }
+        .btn-submit.loading .btn-text { display: none; }
+        .btn-submit.loading .btn-spinner { display: block; }
 
-        .btn-submit.loading .btn-text {
-            display: none;
-        }
-
-        .btn-submit.loading .btn-spinner {
-            display: block;
-        }
-
-        /* ── Switch line ── */
-        .switch-line {
-            text-align: center;
-            margin-top: 1.1rem;
-            font-size: 0.8rem;
-            color: #8a9386;
-        }
-
+        .switch-line { text-align: center; margin-top: 1.1rem; font-size: 0.8rem; color: var(--color-text-muted); }
         .switch-link {
-            color: var(--sage-dark);
-            font-weight: 600;
-            cursor: pointer;
-            background: none;
-            border: none;
-            font-family: inherit;
-            font-size: inherit;
-            text-decoration: underline;
-            text-underline-offset: 2px;
-            transition: color 0.2s;
-            padding: 0;
+            color: var(--color-primary); font-weight: 600; cursor: pointer;
+            background: none; border: none; font-family: inherit; font-size: inherit;
+            text-decoration: underline; text-underline-offset: 2px; transition: color 0.2s; padding: 0;
         }
+        .switch-link:hover { color: var(--accent-violet); }
 
-        .switch-link:hover {
-            color: var(--sage-accent);
-        }
-
-        /* ── Progress bar ── */
         .progress-bar {
-            position: absolute;
-            top: 0;
-            left: 0;
-            height: 3px;
-            width: 0;
-            background: linear-gradient(90deg, var(--sage-primary), var(--sage-tertiary));
+            position: absolute; top: 0; left: 0;
+            height: 3px; width: 0;
+            background: linear-gradient(90deg, var(--accent-violet), var(--accent-cyan));
             border-radius: 0 0 3px 0;
-            transition: width 0.4s ease;
-            z-index: 100;
+            transition: width 0.4s ease; z-index: 100;
         }
 
-        /* ── Back home ── */
         .back-home {
-            position: fixed;
-            top: 1.5rem;
-            left: 1.75rem;
-            z-index: 50;
-            display: flex;
-            align-items: center;
-            gap: 0.4rem;
-            color: rgba(255, 255, 255, .45);
-            font-size: 0.78rem;
-            font-weight: 500;
-            text-decoration: none;
-            transition: color 0.2s, gap 0.2s;
+            position: fixed; top: 1.5rem; left: 1.75rem; z-index: 50;
+            display: flex; align-items: center; gap: 0.4rem;
+            color: rgba(255,255,255,.45); font-size: 0.78rem; font-weight: 500;
+            text-decoration: none; transition: color 0.2s, gap 0.2s;
+            font-family: var(--font-display);
         }
+        .back-home:hover { color: rgba(255,255,255,.9); gap: 0.6rem; }
+        .back-home svg { width: 1rem; height: 1rem; }
 
-        .back-home:hover {
-            color: rgba(255, 255, 255, .9);
-            gap: 0.6rem;
-        }
+        .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; }
 
-        .back-home svg {
-            width: 1rem;
-            height: 1rem;
-        }
-
-        /* ── Row layout for two-column in register ── */
-        .field-row {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 0.75rem;
-        }
-
-        /* ── Responsive ── */
+        /* Responsive */
         @media (max-width: 768px) {
-            .auth-card {
-                width: 100vw;
-                height: 100vh;
-                border-radius: 0;
-            }
-
-            .brand-panel {
-                display: none;
-            }
-
-            .form-side {
-                width: 100%;
-                right: 0;
-                left: 0;
-            }
-
-            .form-panel {
-                padding: 2rem 1.75rem;
-            }
+            .auth-card { width: 100vw; height: 100vh; border-radius: 0; }
+            .brand-panel { display: none; }
+            .form-side { width: 100%; right: 0; left: 0; }
+            .form-panel { padding: 2rem 1.75rem; }
         }
 
         @media (max-width: 900px) and (min-width: 769px) {
-            .brand-panel {
-                width: 40%;
-            }
-
-            .form-side {
-                width: 60%;
-            }
-
-            .auth-card.show-register .brand-panel {
-                transform: translateX(150%);
-            }
+            .brand-panel { width: 40%; }
+            .form-side { width: 60%; }
+            .auth-card.show-register .brand-panel { transform: translateX(150%); }
         }
 
-        /* ── Thin separator line between panels ── */
-
-        .auth-card.show-register .panel-divider {
-            left: 46%;
-            /* stays the same since brand is now on right */
-        }
+        .auth-card.show-register .panel-divider { left: 46%; }
     </style>
 </head>
 
 <body>
-
-    <!-- ── Ambient Shell Background ── -->
+    {{-- Star field ambient particles --}}
     <div class="auth-shell">
         <div class="shell-bg"></div>
 
-        <!-- Back home -->
-        <a href="{{ url('/') }}" class="back-home">
+        {{-- Back home --}}
+        <a href="{{ url('/') }}" class="back-home" data-testid="auth-back-home">
             <svg fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
             </svg>
             Beranda
         </a>
 
-        <!-- ══ AUTH CARD ══ -->
+        {{-- ══ AUTH CARD ══ --}}
         <div class="auth-card {{ isset($initialMode) && $initialMode === 'register' ? 'show-register' : '' }}"
             id="authCard">
 
-            <!-- Top progress bar -->
+            {{-- Top progress bar --}}
             <div class="progress-bar" id="progressBar"></div>
 
-            <!-- ╔══════════════════════════════╗
-                 ║     BRANDING PANEL (LEFT)    ║
-                 ╚══════════════════════════════╝ -->
+            {{-- ╔══════════════════════════════════════╗
+                 ║     BRANDING PANEL (LEFT)            ║
+                 ╚══════════════════════════════════════╝ --}}
             <div class="brand-panel">
-                <!-- Layers -->
                 <div class="brand-img"></div>
                 <div class="brand-overlay"></div>
                 <div class="brand-topo"></div>
                 <div class="brand-blob brand-blob-1"></div>
                 <div class="brand-blob brand-blob-2"></div>
 
-                <!-- Decorative marks -->
                 <div class="brand-deco top-right">+ + +</div>
                 <div class="brand-deco mid-left">· · ·</div>
 
-                <!-- Panel content -->
                 <div class="brand-content">
-                    <!-- Logo -->
                     <div class="brand-logo">
                         <div class="brand-logo-badge">
-                            <svg width="18" height="18" fill="none" stroke="#fff" stroke-width="2.5"
-                                viewBox="0 0 24 24">
+                            <svg width="18" height="18" fill="none" stroke="#fff" stroke-width="2.5" viewBox="0 0 24 24">
                                 <path stroke-linecap="round" stroke-linejoin="round"
                                     d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
                             </svg>
@@ -853,37 +433,32 @@
                         <span class="brand-logo-text">Sinergi<span>.</span></span>
                     </div>
 
-                    <!-- Dynamic headline -->
                     <div class="brand-headline" style="position:relative;">
-                        <!-- Login message -->
                         <div class="brand-msg for-login">
                             <h2>Selamat<br>Datang 👋<span></span></h2>
                             <p>Masuk untuk melanjutkan ke akun Anda dan kelola bisnis dengan lebih efisien.</p>
                         </div>
-                        <!-- Register message -->
                         <div class="brand-msg for-register">
                             <h2>Bergabung<br>Bersama Kami ✨<span></span></h2>
                             <p>Daftar sekarang dan mulai perjalanan bisnis digital Anda bersama Sinergi.</p>
                         </div>
                     </div>
 
-                    <!-- Footer -->
                     <div class="brand-footer">
                         &copy; {{ date('Y') }} Sinergi e-Business. All rights reserved.
                     </div>
                 </div>
-            </div><!-- /brand-panel -->
+            </div>
 
-            <!-- Panel divider line -->
             <div class="panel-divider"></div>
 
-            <!-- ╔══════════════════════════════╗
-                 ║     FORM SIDE (RIGHT)        ║
-                 ╚══════════════════════════════╝ -->
+            {{-- ╔══════════════════════════════════════╗
+                 ║     FORM SIDE (RIGHT)                ║
+                 ╚══════════════════════════════════════╝ --}}
             <div class="form-side">
                 <div class="form-track" id="formTrack">
 
-                    <!-- ── LOGIN FORM PANEL ── -->
+                    {{-- ── LOGIN FORM PANEL ── --}}
                     <div class="form-panel fp-login">
                         <div class="fp-heading">
                             <h1>Masuk</h1>
@@ -891,11 +466,9 @@
                                     sekarang</button></p>
                         </div>
 
-                        <!-- Alert -->
                         <div class="alert-banner" id="loginAlert"></div>
 
                         <form class="form-fields" id="loginForm" novalidate>
-                            <!-- Username -->
                             <div class="field-group">
                                 <label class="field-label" for="login_username">Username</label>
                                 <div class="field-wrap">
@@ -911,7 +484,6 @@
                                 <span class="field-error" id="err_login_username"></span>
                             </div>
 
-                            <!-- Password -->
                             <div class="field-group">
                                 <label class="field-label" for="login_password">Password</label>
                                 <div class="field-wrap">
@@ -937,15 +509,14 @@
                                 <span class="field-error" id="err_login_password"></span>
                             </div>
 
-                            <!-- Submit -->
                             <button type="submit" class="btn-submit" id="loginBtn">
                                 <span class="btn-text">Masuk &rarr;</span>
                                 <div class="btn-spinner"></div>
                             </button>
                         </form>
-                    </div><!-- /fp-login -->
+                    </div>
 
-                    <!-- ── REGISTER FORM PANEL ── -->
+                    {{-- ── REGISTER FORM PANEL ── --}}
                     <div class="form-panel fp-register">
                         <div class="fp-heading">
                             <h1>Buat Akun</h1>
@@ -953,13 +524,10 @@
                                     sini</button></p>
                         </div>
 
-                        <!-- Alert -->
                         <div class="alert-banner" id="registerAlert"></div>
 
                         <form class="form-fields" id="registerForm" novalidate>
-                            <!-- Nama + Username row -->
                             <div class="field-row">
-                                <!-- Nama -->
                                 <div class="field-group">
                                     <label class="field-label" for="reg_name">Nama Lengkap</label>
                                     <div class="field-wrap">
@@ -974,7 +542,6 @@
                                     </div>
                                     <span class="field-error" id="err_reg_name"></span>
                                 </div>
-                                <!-- Username -->
                                 <div class="field-group">
                                     <label class="field-label" for="reg_username">Username</label>
                                     <div class="field-wrap">
@@ -991,7 +558,6 @@
                                 </div>
                             </div>
 
-                            <!-- Email -->
                             <div class="field-group">
                                 <label class="field-label" for="reg_email">Email</label>
                                 <div class="field-wrap">
@@ -1007,7 +573,6 @@
                                 <span class="field-error" id="err_reg_email"></span>
                             </div>
 
-                            <!-- Password + Konfirmasi row -->
                             <div class="field-row">
                                 <div class="field-group">
                                     <label class="field-label" for="reg_password">Password</label>
@@ -1060,11 +625,9 @@
                                 </div>
                             </div>
 
-                            <!-- Alamat -->
                             <div class="field-group">
                                 <label class="field-label" for="reg_address">
-                                    Alamat <span
-                                        style="color:#b8c4b3;font-weight:400;text-transform:none;letter-spacing:0;">(opsional)</span>
+                                    Alamat <span style="color:var(--color-text-muted);font-weight:400;text-transform:none;letter-spacing:0;">(opsional)</span>
                                 </label>
                                 <div class="field-wrap">
                                     <span class="field-icon">
@@ -1081,19 +644,18 @@
                                 <span class="field-error" id="err_reg_address"></span>
                             </div>
 
-                            <!-- Submit -->
                             <button type="submit" class="btn-submit" id="registerBtn">
                                 <span class="btn-text">Daftar Sekarang &rarr;</span>
                                 <div class="btn-spinner"></div>
                             </button>
                         </form>
-                    </div><!-- /fp-register -->
+                    </div>
 
-                </div><!-- /form-track -->
-            </div><!-- /form-side -->
+                </div>
+            </div>
 
-        </div><!-- /auth-card -->
-    </div><!-- /auth-shell -->
+        </div>
+    </div>
 
 
     <script>
