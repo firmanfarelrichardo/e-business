@@ -1,34 +1,42 @@
 @props(['title', 'icon' => null, 'subcategories' => []])
 
-<div class="w-full mb-6">
-    <!-- Category Title -->
-    <div class="bg-white rounded-t-xl px-6 py-4 border border-b-0 border-slate-200 flex items-center gap-3">
+<x-ui.glass-card variant="default" padding="none" class="w-full mb-6 overflow-hidden" data-testid="sub-category-bar">
+    {{-- Category Title --}}
+    <div class="px-6 py-4 flex items-center gap-3 border-b border-[var(--color-border-subtle)]">
         @if($icon)
-            <div class="text-brand-primary">
+            <div class="text-[var(--color-primary)]">
                 {!! $icon !!}
             </div>
         @else
-            <div class="w-2 h-6 bg-brand-primary rounded-full"></div>
+            <div class="w-1.5 h-6 rounded-full" style="background: var(--gradient-gold-day);"></div>
         @endif
-        <h2 class="text-xl font-bold text-brand-dark uppercase tracking-wide">{{ $title }}</h2>
+        <h2 class="text-xl font-bold text-[var(--color-text)] uppercase tracking-wide font-display">{{ $title }}</h2>
     </div>
 
-    <!-- Subcategories Bar -->
-    <div class="bg-[#2C3437] rounded-b-xl px-2 shadow-sm border border-slate-200">
-        <div class="flex overflow-x-auto hide-scrollbar">
+    {{-- Subcategories Chips --}}
+    <div class="px-3 py-2">
+        <div class="flex overflow-x-auto hide-scrollbar gap-1.5">
             @foreach($subcategories as $sub)
                 @if(is_array($sub))
                     <a href="{{ $sub['url'] ?? '#' }}"
-                        class="whitespace-nowrap px-6 py-2.5 text-xs font-semibold text-white/80 hover:text-white hover:bg-white/10 rounded-lg transition-colors my-1 mx-1 {{ request('brand') == ($sub['id'] ?? '') ? 'bg-white/20 text-white' : '' }}">
+                        class="whitespace-nowrap px-5 py-2 text-xs font-semibold rounded-full transition-all duration-200 my-0.5
+                        {{ request('brand') == ($sub['id'] ?? '') 
+                            ? 'text-white shadow-md' 
+                            : 'text-[var(--color-text-secondary)] hover:text-[var(--color-text)] hover:bg-[var(--color-bg-sunken)] bg-transparent' }}"
+                        @if(request('brand') == ($sub['id'] ?? ''))
+                            style="background: var(--gradient-gold-day);"
+                        @endif
+                        data-testid="sub-category-chip-{{ Str::slug($sub['name']) }}">
                         {{ $sub['name'] }}
                     </a>
                 @else
                     <a href="{{ url('/jasa') }}"
-                        class="whitespace-nowrap px-6 py-2.5 text-xs font-semibold text-white/80 hover:text-white hover:bg-white/10 rounded-lg transition-colors my-1 mx-1">
+                        class="whitespace-nowrap px-5 py-2 text-xs font-semibold rounded-full text-[var(--color-text-secondary)] hover:text-[var(--color-text)] hover:bg-[var(--color-bg-sunken)] transition-all duration-200 my-0.5"
+                        data-testid="sub-category-chip">
                         {{ $sub }}
                     </a>
                 @endif
             @endforeach
         </div>
     </div>
-</div>
+</x-ui.glass-card>
