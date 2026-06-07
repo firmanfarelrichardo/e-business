@@ -41,4 +41,35 @@ class ProductBrand extends Model
     {
         return $this->batches()->where('is_active', true)->sum('current_stock');
     }
+
+    /**
+     * Get the dynamically calculated Weighted Average Cost (WAC) based on active batches.
+     * Only batches with current_stock > 0 are included (depleted batches excluded).
+     * This acts as the "Harga Modal" (Cost Price).
+     */
+    public function getAverageCostAttribute(): int
+    {
+        $activeBatches = $this->batches()
+            ->where('current_stock', '>', 0)
+            ->get(['purchase_price', 'current_stock']);
+
+        if ($activeBatches->isEmpty()) {
+            return 0; // No active stock, cost is 0
+        }
+
+        $totalValue = $activeBatches->sum(fn($b) => $b->purchase_price * $b->current_stock);
+        $totalQuantity = $activeBatches->sum('current_stock');
+
+        return $totalQuantity > 0 ? intdiv((int) $totalValue, (int) $totalQuantity) : 0;
+    }
+
+    /**
+     * Recalculate WAC.
+     * With the current dynamic WAC implementation, this does not need to store to DB.
+     * Added to prevent BadMethodCallException.
+     */
+    public function recalculateWAC()
+    {
+        return $this->average_cost;
+    }
 }

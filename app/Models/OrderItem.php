@@ -19,7 +19,9 @@ class OrderItem extends Model
         'note',
         'order_id',
         'product_brand_id',
-        'service_id'
+        'service_id',
+        'cogs',
+        'document_path'
     ];
 
     public function order()

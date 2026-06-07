@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   # App Service: Mengelola proses PHP-FPM utama Laravel
   app:
@@ -15,6 +13,7 @@ services:
     # Volume Binding Penuh: Sinkronisasi realtime kode dari host ke container
     volumes:
       - ../../:/var/www/html
+      - ./docker-entrypoint.sh:/usr/local/bin/docker-entrypoint.sh:ro
     # Membuka port 5173 untuk mengakses Vite (HMR) dari browser host
     ports:
       - "5173:5173"

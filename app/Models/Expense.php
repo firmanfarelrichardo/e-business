@@ -23,7 +23,7 @@ class Expense extends Model
     {
         return [
             'total_amount' => 'decimal:0',
-            'created_at'   => 'datetime',
+            'created_at' => 'datetime',
         ];
     }
 
@@ -32,7 +32,7 @@ class Expense extends Model
         return $this->belongsTo(Batch::class);
     }
 
-    public function createdBy()
+    public function creator()
     {
         return $this->belongsTo(User::class, 'created_by');
     }

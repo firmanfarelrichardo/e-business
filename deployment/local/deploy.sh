@@ -31,13 +31,20 @@ fi
 # PROJECT-SCOPED DOCKER COMPOSE
 # ---------------------------------------------------------------------------
 COMPOSE_PROJECT="e-business"
-DC="docker compose -p ${COMPOSE_PROJECT} --project-directory ${COMPOSE_DIR}"
+
+dc() {
+    docker compose -p "$COMPOSE_PROJECT" --project-directory "$COMPOSE_DIR" --env-file "$PROJECT_DIR/.env" "$@"
+}
 
 # Container names
 APP_CONTAINER="e-business-app"
 WEB_CONTAINER="e-business-web"
 DB_CONTAINER="e-business-db"
 REDIS_CONTAINER="e-business-redis"
+APP_PORT_DEFAULT=8000
+NGROK_API_URL="http://127.0.0.1:4040/api/tunnels"
+NGROK_LOG="/tmp/e-business-ngrok.log"
+NGROK_PID_FILE="/tmp/e-business-ngrok.pid"
 
 # ---------------------------------------------------------------------------
 # Helper: cek apakah container MILIK PROJECT INI sedang running
@@ -75,6 +82,7 @@ show_menu() {
     echo -e "  ${CYAN}--- Start/Stop ---${NC}"
     echo -e "  ${GREEN}1)${NC} Start Development (docker compose up)"
     echo -e "  ${GREEN}2)${NC} Stop Development"
+    echo -e "  ${GREEN}6)${NC} Start Development + Ngrok"
     echo ""
     echo -e "  ${CYAN}--- Rebuild ---${NC}"
     echo -e "  ${GREEN}3)${NC} Clean Rebuild (Hapus semua & rebuild)"
@@ -101,6 +109,7 @@ show_menu() {
     echo -e "  ${GREEN}24)${NC} Access App Shell"
     echo -e "  ${YELLOW}25)${NC} Re-initialize App (composer install + key:generate + migrate)"
     echo -e "  ${GREEN}26)${NC} Install / Update Dependensi PHP (Composer Install)"
+    echo -e "  ${GREEN}27)${NC} Run Database Seeders"
     echo ""
     echo -e "  ${CYAN}--- Frontend (Vite) ---${NC}"
     echo -e "  ${GREEN}30)${NC} NPM Install (via App container)"
@@ -115,14 +124,21 @@ show_menu() {
     echo -e "  ${CYAN}--- Cleanup (Project-Scoped) ---${NC}"
     echo -e "  ${RED}50)${NC} Remove Stopped Containers & Dangling Images"
     echo -e "  ${RED}51)${NC} Remove ALL Project Resources (Termasuk Volume DB)"
+    echo -e "  ${RED}52)${NC} Fix Container Name Conflicts (Force rm by name)"
     echo ""
     echo -e "  ${CYAN}--- WSL Network ---${NC}"
     echo -e "  ${YELLOW}60)${NC} Show Detected Gateway IP"
     echo -e "  ${GREEN}61)${NC} Auto-Update DB_HOST to WSL Gateway IP"
     echo ""
+    echo -e "  ${CYAN}--- Ngrok / Xendit ---${NC}"
+    echo -e "  ${GREEN}62)${NC} Start Ngrok and Sync PUBLIC_APP_URL"
+    echo -e "  ${YELLOW}63)${NC} Show Ngrok Public URL"
+    echo -e "  ${YELLOW}64)${NC} Sync PUBLIC_APP_URL from Ngrok"
+    echo -e "  ${RED}65)${NC} Stop Ngrok"
+    echo ""
     echo -e "  ${RED}0)${NC} Exit"
     echo ""
-    echo -n "Pilihan [0-61]: "
+    echo -n "Pilihan [0-65]: "
 }
 
 # Function to show container status
@@ -207,7 +223,7 @@ show_project_images() {
     echo -e "${CYAN}Scope: docker compose images (hanya milik project ini)${NC}"
     echo ""
 
-    $DC images
+    dc images
 
     echo ""
     echo -e "${YELLOW}Built Images (dengan label project):${NC}"
@@ -266,7 +282,7 @@ test_endpoint() {
     VITE_PORT=$(grep "^VITE_PORT=" "$PROJECT_DIR/.env" 2>/dev/null | cut -d'=' -f2 | tr -d '\r')
     VITE_PORT=${VITE_PORT:-5173}
     DB_PORT=$(grep "^FORWARD_DB_PORT=" "$PROJECT_DIR/.env" 2>/dev/null | cut -d'=' -f2 | tr -d '\r')
-    DB_PORT=${DB_PORT:-5432}
+    DB_PORT=${DB_PORT:-5433}
     REDIS_PORT=$(grep "^FORWARD_REDIS_PORT=" "$PROJECT_DIR/.env" 2>/dev/null | cut -d'=' -f2 | tr -d '\r')
     REDIS_PORT=${REDIS_PORT:-6379}
 
@@ -394,7 +410,7 @@ show_all_logs() {
     echo ""
     echo -e "${CYAN}Showing All Project Logs (Ctrl+C to exit)...${NC}"
     echo ""
-    $DC logs --tail 100 -f
+    dc logs --tail 100 -f
 }
 
 # Function to run artisan command
@@ -462,11 +478,16 @@ app_init() {
     echo ""
 
     # 1. Composer install
-    if docker exec "$APP_CONTAINER" test -f vendor/autoload.php 2>/dev/null; then
+    if docker exec "$APP_CONTAINER" test -f vendor/autoload.php 2>/dev/null \
+        && docker exec "$APP_CONTAINER" test -d vendor/laravel/sanctum 2>/dev/null; then
         echo -e "  ${GREEN}✓${NC} composer install  ${CYAN}(vendor sudah ada, skip)${NC}"
     else
         echo -e "  ${YELLOW}➤${NC} composer install ..."
-        docker exec "$APP_CONTAINER" composer install --no-interaction --prefer-dist --optimize-autoloader
+        docker exec "$APP_CONTAINER" git config --global --add safe.directory /var/www/html 2>/dev/null || true
+        if ! docker exec "$APP_CONTAINER" composer install --no-interaction --prefer-dist --optimize-autoloader; then
+            echo -e "  ${RED}✗${NC} composer install gagal"
+            return 1
+        fi
         echo -e "  ${GREEN}✓${NC} composer install selesai"
     fi
 
@@ -476,11 +497,28 @@ app_init() {
         echo -e "  ${GREEN}✓${NC} APP_KEY         ${CYAN}(sudah ada, skip)${NC}"
     else
         echo -e "  ${YELLOW}➤${NC} php artisan key:generate ..."
-        docker exec "$APP_CONTAINER" php artisan key:generate --no-interaction --force
+        if ! docker exec "$APP_CONTAINER" php artisan key:generate --no-interaction --force; then
+            echo -e "  ${RED}✗${NC} APP_KEY generation gagal"
+            return 1
+        fi
         echo -e "  ${GREEN}✓${NC} APP_KEY generated"
     fi
 
-    # 3. migrate
+    # 3. Wait for DB and migrate
+    echo -e "  ${YELLOW}➤${NC} waiting for database to be ready..."
+    local db_waited=0
+    while ! docker exec "$DB_CONTAINER" pg_isready -q 2>/dev/null; do
+        sleep 2
+        db_waited=$((db_waited + 2))
+        if [ "$db_waited" -ge 60 ]; then
+            echo -e "  ${RED}✗${NC} Database failed to start within 60s"
+            return 1
+        fi
+        echo -n "."
+    done
+    echo ""
+    echo -e "  ${GREEN}✓${NC} database is ready"
+
     echo -e "  ${YELLOW}➤${NC} php artisan migrate ..."
     if docker exec "$APP_CONTAINER" php artisan migrate --no-interaction --force; then
         echo -e "  ${GREEN}✓${NC} migrate selesai"
@@ -491,6 +529,7 @@ app_init() {
 
     echo ""
     echo -e "${GREEN}✓ App initialization complete!${NC}"
+    return 0
 }
 
 detect_wsl_gateway() {
@@ -666,6 +705,230 @@ check_env() {
     return 0
 }
 
+preflight_docker() {
+    local require_buildx="${1:-0}"
+
+    if ! docker info >/dev/null 2>&1; then
+        echo -e "${RED}✗ Docker daemon tidak bisa diakses. Pastikan Docker Desktop/daemon sudah running.${NC}"
+        return 1
+    fi
+
+    if ! docker compose version >/dev/null 2>&1; then
+        echo -e "${RED}✗ Docker Compose plugin tidak tersedia. Install/update Docker Compose terlebih dahulu.${NC}"
+        return 1
+    fi
+
+    if [ "$require_buildx" = "1" ] && ! docker buildx version >/dev/null 2>&1; then
+        echo -e "${RED}✗ Docker Buildx plugin tidak tersedia, padahal build image membutuhkannya.${NC}"
+        echo -e "${YELLOW}  Install/enable Docker Buildx, lalu ulangi opsi ini.${NC}"
+        return 1
+    fi
+
+    return 0
+}
+
+compose_up_needs_buildx() {
+    local args="$*"
+    if echo "$args" | grep -q -- "--build"; then
+        return 0
+    fi
+    if ! docker image inspect e-business-app-local >/dev/null 2>&1; then
+        return 0
+    fi
+    return 1
+}
+
+set_env_value() {
+    local key="$1"
+    local value="$2"
+    local file="$PROJECT_DIR/.env"
+
+    if [ ! -f "$file" ]; then
+        echo -e "${RED}✗ File .env tidak ditemukan: $file${NC}"
+        return 1
+    fi
+
+    if grep -q "^${key}=" "$file"; then
+        sed -i "s|^${key}=.*|${key}=${value}|" "$file"
+    else
+        printf "\n%s=%s\n" "$key" "$value" >> "$file"
+    fi
+}
+
+get_env_value() {
+    local key="$1"
+    grep "^${key}=" "$PROJECT_DIR/.env" 2>/dev/null | head -1 | cut -d'=' -f2- | tr -d '\r'
+}
+
+get_app_port() {
+    local port
+    port=$(get_env_value "APP_PORT")
+    echo "${port:-$APP_PORT_DEFAULT}"
+}
+
+get_ngrok_public_url() {
+    curl -s "$NGROK_API_URL" 2>/dev/null \
+        | tr ',' '\n' \
+        | sed -n 's/.*"public_url":"\(https:\/\/[^"]*\)".*/\1/p' \
+        | head -1
+}
+
+wait_for_ngrok_url() {
+    local waited=0
+    local public_url=""
+
+    while [ "$waited" -lt 20 ]; do
+        public_url=$(get_ngrok_public_url)
+        if [ -n "$public_url" ]; then
+            echo "$public_url"
+            return 0
+        fi
+        sleep 1
+        waited=$((waited + 1))
+    done
+
+    return 1
+}
+
+start_ngrok() {
+    local app_port="${1:-$APP_PORT_DEFAULT}"
+    local existing_url
+
+    if ! command -v ngrok >/dev/null 2>&1; then
+        echo -e "${RED}✗ ngrok CLI tidak ditemukan. Install ngrok atau jalankan manual tunnel.${NC}"
+        return 1
+    fi
+
+    existing_url=$(get_ngrok_public_url)
+    if [ -n "$existing_url" ]; then
+        echo -e "${GREEN}✓ Ngrok sudah running: ${CYAN}${existing_url}${NC}"
+        return 0
+    fi
+
+    echo -e "${YELLOW}Starting ngrok tunnel for http://localhost:${app_port} ...${NC}"
+    nohup ngrok http "$app_port" --log=stdout > "$NGROK_LOG" 2>&1 &
+    echo "$!" > "$NGROK_PID_FILE"
+
+    local public_url
+    public_url=$(wait_for_ngrok_url)
+    if [ -z "$public_url" ]; then
+        echo -e "${RED}✗ Gagal mendapatkan public URL dari ngrok API.${NC}"
+        echo -e "${YELLOW}  Cek log: ${NGROK_LOG}${NC}"
+        return 1
+    fi
+    echo -e "${GREEN}✓ Ngrok started: ${CYAN}${public_url}${NC}"
+}
+
+sync_public_app_url_from_ngrok() {
+    local public_url
+    public_url=$(get_ngrok_public_url)
+
+    if [ -z "$public_url" ]; then
+        echo -e "${RED}✗ Ngrok public URL belum tersedia. Jalankan Option 62 lebih dulu.${NC}"
+        return 1
+    fi
+
+    set_env_value "PUBLIC_APP_URL" "$public_url" || return 1
+    echo -e "${GREEN}✓ PUBLIC_APP_URL synced:${NC} ${CYAN}${public_url}${NC}"
+    echo -e "${CYAN}Webhook URL:${NC} ${public_url}/api/webhooks/xendit"
+
+    if is_container_running "$APP_CONTAINER" && docker exec "$APP_CONTAINER" test -f artisan 2>/dev/null; then
+        docker exec "$APP_CONTAINER" php artisan config:clear >/dev/null 2>&1 \
+            && echo -e "${GREEN}✓ Laravel config cache cleared${NC}" \
+            || echo -e "${YELLOW}⚠ Gagal clear config cache; jalankan Option 22 setelah app siap.${NC}"
+    fi
+}
+
+start_ngrok_and_sync() {
+    local app_port
+    app_port=$(get_app_port)
+    start_ngrok "$app_port" || return 1
+    sync_public_app_url_from_ngrok || return 1
+}
+
+show_ngrok_public_url() {
+    print_header "Ngrok Public URL"
+    local public_url
+    public_url=$(get_ngrok_public_url)
+
+    if [ -n "$public_url" ]; then
+        echo -e "${GREEN}✓ Public URL:${NC} ${CYAN}${public_url}${NC}"
+        echo -e "${CYAN}Webhook URL:${NC} ${public_url}/api/webhooks/xendit"
+        echo -e "${YELLOW}Current PUBLIC_APP_URL:${NC} $(get_env_value "PUBLIC_APP_URL")"
+    else
+        echo -e "${RED}✗ Ngrok tidak terdeteksi di ${NGROK_API_URL}${NC}"
+    fi
+
+    echo ""
+    read -p "Press Enter to continue..."
+}
+
+stop_ngrok() {
+    print_header "Stop Ngrok"
+
+    if [ -f "$NGROK_PID_FILE" ]; then
+        local pid
+        pid=$(cat "$NGROK_PID_FILE")
+        if [ -n "$pid" ] && kill "$pid" >/dev/null 2>&1; then
+            rm -f "$NGROK_PID_FILE"
+            echo -e "${GREEN}✓ Ngrok stopped (PID $pid)${NC}"
+            echo ""
+            read -p "Press Enter to continue..."
+            return 0
+        fi
+        rm -f "$NGROK_PID_FILE"
+    fi
+
+    if pkill -f "ngrok http" >/dev/null 2>&1; then
+        echo -e "${GREEN}✓ Ngrok process stopped${NC}"
+    else
+        echo -e "${YELLOW}Ngrok process tidak ditemukan.${NC}"
+    fi
+
+    echo ""
+    read -p "Press Enter to continue..."
+}
+
+fix_container_conflicts() {
+    print_header "Fixing Container Name Conflicts"
+    echo -e "${YELLOW}Mencari container yang bentrok (bernama sama tetapi di luar project ini)...${NC}"
+    
+    local resolved=0
+    for container in $APP_CONTAINER $WEB_CONTAINER $DB_CONTAINER $REDIS_CONTAINER; do
+        if docker ps -a --format '{{.Names}}' | grep -q "^${container}$"; then
+            echo -e "  ${YELLOW}→${NC} Menghapus container yang bentrok: ${RED}$container${NC}"
+            docker rm -f "$container" >/dev/null 2>&1
+            resolved=$((resolved + 1))
+        fi
+    done
+    
+    if [ "$resolved" -gt 0 ]; then
+        echo -e "  ${GREEN}✓ $resolved container berhasil dibersihkan.${NC}"
+    else
+        echo -e "  ${GREEN}✓ Tidak ada container yang bentrok.${NC}"
+    fi
+}
+
+start_compose_up() {
+    local require_buildx=0
+    if compose_up_needs_buildx "$@"; then
+        require_buildx=1
+    fi
+
+    preflight_docker "$require_buildx" || return 1
+
+    if ! dc up -d "$@"; then
+        echo -e "${RED}✗ Gagal menjalankan docker compose up karena error (mungkin konflik).${NC}"
+        fix_container_conflicts
+        echo -e "${YELLOW}Mencoba start ulang...${NC}"
+        if ! dc up -d "$@"; then
+            echo -e "${RED}✗ Tetap gagal. Silakan periksa error secara manual.${NC}"
+            return 1
+        fi
+    fi
+    return 0
+}
+
 # Main loop
 while true; do
     show_menu
@@ -676,12 +939,17 @@ while true; do
             check_env || continue
             echo ""
             echo -e "${GREEN}Starting E-Business Development Environment...${NC}"
-            $DC up -d
+            start_compose_up || continue
 
             APP_PORT=8000
             VITE_PORT=5173
 
-            app_init
+            if ! app_init; then
+                echo ""
+                echo -e "${RED}✗ Development environment gagal diinisialisasi.${NC}"
+                read -p "Press Enter to continue..."
+                continue
+            fi
 
             echo ""
             echo -e "${GREEN}✓ Development environment started!${NC}"
@@ -689,7 +957,7 @@ while true; do
             echo -e "${YELLOW}Services:${NC}"
             echo -e "  App (Nginx):    http://localhost:$APP_PORT"
             echo -e "  Vite HMR:       http://localhost:$VITE_PORT"
-            echo -e "  PostgreSQL:     localhost:5432"
+            echo -e "  PostgreSQL:     localhost:5433"
             echo -e "  Redis:          localhost:6379"
             echo ""
             read -p "Press Enter to continue..."
@@ -697,8 +965,42 @@ while true; do
         2)
             echo ""
             echo -e "${YELLOW}Stopping E-Business Development Environment...${NC}"
-            $DC down
+            dc down
             echo -e "${GREEN}✓ Development environment stopped!${NC}"
+            read -p "Press Enter to continue..."
+            ;;
+        6)
+            check_env || continue
+            echo ""
+            echo -e "${GREEN}Starting E-Business Development Environment with Ngrok...${NC}"
+            start_compose_up || continue
+
+            APP_PORT=8000
+            VITE_PORT=5173
+
+            if ! app_init; then
+                echo ""
+                echo -e "${RED}✗ Development environment gagal diinisialisasi.${NC}"
+                read -p "Press Enter to continue..."
+                continue
+            fi
+
+            if ! start_ngrok_and_sync; then
+                echo ""
+                echo -e "${RED}✗ Ngrok gagal dijalankan/disinkronkan.${NC}"
+                read -p "Press Enter to continue..."
+                continue
+            fi
+
+            echo ""
+            echo -e "${GREEN}✓ Development environment + ngrok started!${NC}"
+            echo ""
+            echo -e "${YELLOW}Services:${NC}"
+            echo -e "  App (Nginx):    http://localhost:$APP_PORT"
+            echo -e "  Public URL:     $(get_env_value "PUBLIC_APP_URL")"
+            echo -e "  Xendit Webhook: $(get_env_value "PUBLIC_APP_URL")/api/webhooks/xendit"
+            echo -e "  Vite HMR:       http://localhost:$VITE_PORT"
+            echo ""
             read -p "Press Enter to continue..."
             ;;
         3)
@@ -708,9 +1010,9 @@ while true; do
             echo -e "${RED}WARNING: Database data will be LOST!${NC}"
             read -p "Are you sure? (y/n): " confirm
             if [ "$confirm" = "y" ] || [ "$confirm" = "Y" ]; then
-                $DC down -v --rmi local
-                $DC up -d
-                app_init
+                dc down -v --rmi local
+                start_compose_up || continue
+                app_init || continue
                 echo -e "${GREEN}✓ Clean rebuild complete!${NC}"
             fi
             read -p "Press Enter to continue..."
@@ -719,8 +1021,8 @@ while true; do
             check_env || continue
             echo ""
             echo -e "${GREEN}Quick Rebuild (preserving data)...${NC}"
-            $DC up -d --build
-            app_init
+            start_compose_up --build || continue
+            app_init || continue
             echo -e "${GREEN}✓ Quick rebuild complete!${NC}"
             read -p "Press Enter to continue..."
             ;;
@@ -733,12 +1035,13 @@ while true; do
             read -p "Are you sure? (y/n): " confirm
             if [ "$confirm" = "y" ] || [ "$confirm" = "Y" ]; then
                 echo -e "${YELLOW}Stopping project containers...${NC}"
-                $DC down
+                dc down
                 echo -e "${YELLOW}Building images without cache...${NC}"
-                $DC build --no-cache
+                preflight_docker 1 || continue
+                dc build --no-cache || continue
                 echo -e "${YELLOW}Starting services...${NC}"
-                $DC up -d
-                app_init
+                start_compose_up || continue
+                app_init || continue
                 echo ""
                 echo -e "${GREEN}✓ Force rebuild completed successfully!${NC}"
             fi
@@ -829,7 +1132,7 @@ while true; do
             ;;
         25)
             print_header "Re-initialize App"
-            app_init
+            app_init || echo -e "${RED}✗ Re-initialize App gagal.${NC}"
             read -p "Press Enter to continue..."
             ;;
         26)
@@ -843,6 +1146,26 @@ while true; do
             docker exec "$APP_CONTAINER" composer install --no-interaction --prefer-dist --optimize-autoloader
             docker exec "$APP_CONTAINER" php artisan optimize:clear
             echo -e "${GREEN}✓ Berhasil! Dependensi diperbarui dan cache dibersihkan.${NC}"
+            read -p "Press Enter to continue..."
+            ;;
+        27)
+            echo ""
+            if ! is_container_running "${APP_CONTAINER}"; then
+                echo -e "${RED}✗ App container is not running!${NC}"
+                read -p "Press Enter to continue..."
+                continue
+            fi
+            if ! docker exec "$APP_CONTAINER" test -f vendor/autoload.php 2>/dev/null; then
+                echo -e "${RED}✗ vendor/autoload.php not found! Jalankan composer install dulu.${NC}"
+                read -p "Press Enter to continue..."
+                continue
+            fi
+            echo -e "${YELLOW}Running Database Seeders...${NC}"
+            if docker exec "$APP_CONTAINER" php artisan db:seed --no-interaction --force; then
+                echo -e "${GREEN}✓ Database seeders complete${NC}"
+            else
+                echo -e "${RED}✗ Database seeders failed — cek logs: Option 15${NC}"
+            fi
             read -p "Press Enter to continue..."
             ;;
         30)
@@ -911,12 +1234,12 @@ while true; do
             echo -e "${RED}ALL DATABASE DATA WILL BE PERMANENTLY DESTROYED!${NC}"
             read -p "Type 'RESET' to confirm: " confirm
             if [ "$confirm" = "RESET" ]; then
-                $DC down
+                dc down
                 VOLUME_NAME=$(docker volume ls --filter "label=com.docker.compose.project=${COMPOSE_PROJECT}" --filter "name=db-data" --format '{{.Name}}')
                 if [ -n "$VOLUME_NAME" ]; then
                     docker volume rm "$VOLUME_NAME"
                 fi
-                $DC up -d
+                dc up -d
                 echo -e "${GREEN}✓ Database reset complete!${NC}"
             fi
             read -p "Press Enter to continue..."
@@ -938,9 +1261,14 @@ while true; do
             echo -e "${RED}Ini akan PERMANEN menghapus semua resource project '${COMPOSE_PROJECT}' (termasuk DB)!${NC}"
             read -p "Type 'DELETE ALL' to confirm: " confirm
             if [ "$confirm" = "DELETE ALL" ]; then
-                $DC down -v --rmi local 2>/dev/null
+                dc down -v --rmi local 2>/dev/null
                 echo -e "${GREEN}✓ All E-Business resources removed!${NC}"
             fi
+            read -p "Press Enter to continue..."
+            ;;
+        52)
+            echo ""
+            fix_container_conflicts
             read -p "Press Enter to continue..."
             ;;
         60)
@@ -948,6 +1276,24 @@ while true; do
             ;;
         61)
             update_db_host_ip
+            ;;
+        62)
+            print_header "Start Ngrok and Sync PUBLIC_APP_URL"
+            start_ngrok_and_sync
+            echo ""
+            read -p "Press Enter to continue..."
+            ;;
+        63)
+            show_ngrok_public_url
+            ;;
+        64)
+            print_header "Sync PUBLIC_APP_URL from Ngrok"
+            sync_public_app_url_from_ngrok
+            echo ""
+            read -p "Press Enter to continue..."
+            ;;
+        65)
+            stop_ngrok
             ;;
         0)
             echo -e "${GREEN}Goodbye!${NC}"

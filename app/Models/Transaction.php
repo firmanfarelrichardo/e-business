@@ -9,12 +9,13 @@ class Transaction extends Model
 {
     use HasUuid;
 
-    public $timestamps = false;
+    public $timestamps = true;
 
     protected $fillable = [
         'order_id',
         'transaction_code',
         'transaction_status',
+        'payment_url',
         'gateway_response',
         'payment_type_id',
         'created_at',
@@ -25,8 +26,8 @@ class Transaction extends Model
     {
         return [
             'gateway_response' => 'array',
-            'created_at'       => 'datetime',
-            'paid_at'          => 'datetime',
+            'created_at' => 'datetime',
+            'paid_at' => 'datetime',
         ];
     }
 

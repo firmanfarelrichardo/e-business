@@ -9,22 +9,22 @@
 <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
 
     {{-- PILIH PRODUK --}}
-    <div class="lg:col-span-2 glass-card p-6 rounded-2xl">
+    <div class="lg:col-span-2 glass-card p-6 rounded-[var(--radius-xl)]">
         <h3 class="font-bold mb-4">Pilih Produk / Jasa</h3>
 
         <div class="grid grid-cols-2 md:grid-cols-3 gap-4">
             @foreach($products as $product)
             <button onclick="addItem({{ $product->id }}, '{{ $product->name }}', {{ $product->price }})"
-                class="p-4 bg-white rounded-xl border hover:bg-brand-tertiary/30 text-left">
+                class="p-4 bg-[var(--color-bg-elevated)] rounded-xl border hover:bg-[var(--accent-mint)]/30 text-left">
                 <p class="font-semibold">{{ $product->name }}</p>
-                <p class="text-sm text-slate-500">Rp {{ number_format($product->price) }}</p>
+                <p class="text-sm text-[var(--color-text-muted)]">Rp {{ number_format($product->price) }}</p>
             </button>
             @endforeach
         </div>
     </div>
 
     {{-- CART --}}
-    <div class="glass-card p-6 rounded-2xl">
+    <div class="glass-card p-6 rounded-[var(--radius-xl)]">
         <h3 class="font-bold mb-4">Order</h3>
 
         <form method="POST" action="/orders">
@@ -45,7 +45,7 @@
                 <p class="font-bold">Total: Rp <span id="total">0</span></p>
             </div>
 
-            <button class="mt-4 w-full bg-brand-primary text-white py-2 rounded-xl">
+            <button class="mt-4 w-full bg-[var(--color-primary)] text-white py-2 rounded-xl">
                 Simpan Order
             </button>
         </form>

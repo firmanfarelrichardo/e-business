@@ -1,334 +1,213 @@
-@extends('layouts.app')
+@extends('components.layouts.dashboard')
 
-@section('title', 'Dashboard')
-@section('page-title', 'Dashboard')
-
-@push('styles')
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-<style>
-    .dashboard-grid {
-        display: grid;
-        grid-template-columns: 1fr 1fr 1fr;
-        gap: 1.25rem;
-    }
-
-    .chart-card { grid-column: 1 / 3; }
-    .queue-card { grid-column: 3 / 4; }
-
-    @media (max-width: 1024px) {
-        .dashboard-grid { grid-template-columns: 1fr 1fr; }
-        .chart-card { grid-column: 1 / -1; }
-        .queue-card { grid-column: 1 / -1; }
-    }
-
-    @media (max-width: 640px) {
-        .dashboard-grid { grid-template-columns: 1fr; }
-    }
-
-    /* Period toggle */
-    .period-toggle {
-        display: flex;
-        background: #F4F6F2;
-        border-radius: 9px;
-        padding: 3px;
-        gap: 2px;
-    }
-
-    .period-btn {
-        padding: 0.35rem 0.9rem;
-        border: none;
-        background: transparent;
-        border-radius: 7px;
-        font-family: 'DM Sans', sans-serif;
-        font-size: 0.78rem;
-        font-weight: 500;
-        color: #7A8A78;
-        cursor: pointer;
-        transition: all 0.2s;
-    }
-
-    .period-btn.active {
-        background: white;
-        color: var(--sage-deeper);
-        box-shadow: 0 1px 4px rgba(0,0,0,0.08);
-    }
-
-    /* Queue list */
-    .queue-item {
-        display: flex;
-        align-items: center;
-        gap: 0.75rem;
-        padding: 0.7rem 0;
-        border-bottom: 1px solid #F4F6F2;
-    }
-
-    .queue-item:last-child { border-bottom: none; }
-
-    .queue-num {
-        width: 32px; height: 32px;
-        background: var(--sage-pale);
-        border-radius: 8px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 0.78rem;
-        font-weight: 700;
-        color: var(--sage-deeper);
-        flex-shrink: 0;
-    }
-
-    .queue-num.active-queue {
-        background: var(--sage);
-        color: white;
-    }
-
-    /* Recent orders table shortcut */
-    .quick-stat {
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        padding: 0.65rem 0;
-        border-bottom: 1px solid #F4F6F2;
-        font-size: 0.85rem;
-    }
-
-    .quick-stat:last-child { border-bottom: none; }
-</style>
-@endpush
+@section('header')
+    <h1 class="text-lg font-bold text-[var(--color-text)] font-display">Dashboard</h1>
+    <p class="text-xs text-[var(--color-text-muted)]">Pantau semua metrik penjualan dan pengeluaran</p>
+@endsection
 
 @section('content')
 
-<div class="page-header">
-    <div>
-        <h2>Selamat Datang, {{ explode(' ', Auth::user()->name)[0] }} 👋</h2>
-        <p>{{ now()->translatedFormat('l, d F Y') }} — Ringkasan bisnis hari ini</p>
-    </div>
-    <a href="{{ route('cashier.index') }}" class="btn btn-sage">
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></svg>
-        Buka Kasir
-    </a>
-</div>
+    @push('scripts')
+        <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+        <script type="module">
+            import { animate, stagger, scroll } from "https://esm.sh/motion";
 
-{{-- Stat Cards --}}
-<div class="stat-grid">
-    <div class="stat-card">
-        <div class="stat-label">Pendapatan Hari Ini</div>
-        <div class="stat-value">Rp {{ number_format($stats['revenue_today'] ?? 0, 0, ',', '.') }}</div>
-        <div class="stat-sub">
-            @if(($stats['revenue_pct'] ?? 0) >= 0)
-                <span style="color:#2E7D32">↑ {{ $stats['revenue_pct'] ?? 0 }}%</span>
-            @else
-                <span style="color:#C62828">↓ {{ abs($stats['revenue_pct'] ?? 0) }}%</span>
-            @endif
-            vs kemarin
-        </div>
-        <div class="stat-icon" style="background:#E8F5E9;">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#2E7D32" stroke-width="2"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
-        </div>
-    </div>
+            animate(
+                ".motion-card",
+                { y: [30, 0], opacity: [0, 1] },
+                { delay: stagger(0.1), duration: 0.6, easing: [0.22, 1, 0.36, 1] }
+            );
+            animate(
+                ".motion-chart",
+                { scale: [0.95, 1], opacity: [0, 1] },
+                { delay: 0.4, duration: 0.7, easing: "ease-out" }
+            );
+            animate(
+                ".motion-queue",
+                { x: [30, 0], opacity: [0, 1] },
+                { delay: 0.5, duration: 0.7, easing: "ease-out" }
+            );
 
-    <div class="stat-card">
-        <div class="stat-label">Total Order</div>
-        <div class="stat-value">{{ $stats['orders_today'] ?? 0 }}</div>
-        <div class="stat-sub">{{ $stats['orders_pending'] ?? 0 }} masih diproses</div>
-        <div class="stat-icon" style="background:#E3F2FD;">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#1565C0" stroke-width="2"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 01-8 0"/></svg>
-        </div>
-    </div>
+            // Determine chart colors based on theme
+            const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+            const gridColor = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.06)';
+            const textColor = isDark ? 'rgba(255,255,255,0.5)' : 'rgba(0,0,0,0.5)';
 
-    <div class="stat-card">
-        <div class="stat-label">Antrian Aktif</div>
-        <div class="stat-value">{{ $stats['queue_active'] ?? 0 }}</div>
-        <div class="stat-sub">No. antrian saat ini: <strong>{{ $stats['queue_current'] ?? '-' }}</strong></div>
-        <div class="stat-icon" style="background:#FFF8E1;">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#F57F17" stroke-width="2"><polyline points="12 8 12 12 14 14"/><path d="M3.05 11a9 9 0 1 0 .5-4.5"/></svg>
-        </div>
-    </div>
+            const ctx = document.getElementById('financeChart').getContext('2d');
+            new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun'],
+                    datasets: [
+                        {
+                            label: 'Income',
+                            data: [500000, 750000, 600000, 1200000, 1000000, {{ $income }}],
+                            borderColor: '#22d3ee',
+                            backgroundColor: 'rgba(34, 211, 238, 0.08)',
+                            borderWidth: 3,
+                            tension: 0.4,
+                            fill: true,
+                            pointBackgroundColor: '#22d3ee',
+                            pointBorderWidth: 0,
+                            pointRadius: 0,
+                            pointHoverRadius: 6,
+                        },
+                        {
+                            label: 'Expense',
+                            data: [300000, 200000, 450000, 300000, 500000, {{ $expense }}],
+                            borderColor: '#0284C7',
+                            backgroundColor: 'rgba(2, 132, 199, 0.08)',
+                            borderWidth: 3,
+                            tension: 0.4,
+                            fill: false,
+                            pointBackgroundColor: '#0284C7',
+                            pointBorderWidth: 0,
+                            pointRadius: 0,
+                            pointHoverRadius: 6,
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'top', align: 'end',
+                            labels: {
+                                usePointStyle: true, boxWidth: 8,
+                                font: { family: "'Plus Jakarta Sans', sans-serif", size: 12, weight: 600 },
+                                color: textColor,
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            grid: { borderDash: [5, 5], color: gridColor },
+                            ticks: { font: { family: "'JetBrains Mono', monospace", size: 10 }, color: textColor }
+                        },
+                        x: {
+                            grid: { display: false },
+                            ticks: { font: { family: "'Plus Jakarta Sans', sans-serif", size: 11 }, color: textColor }
+                        }
+                    },
+                    interaction: { mode: 'index', intersect: false },
+                }
+            });
+        </script>
+    @endpush
 
-    <div class="stat-card">
-        <div class="stat-label">Total Pengeluaran</div>
-        <div class="stat-value">Rp {{ number_format($stats['expenses_today'] ?? 0, 0, ',', '.') }}</div>
-        <div class="stat-sub">Bulan ini: Rp {{ number_format($stats['expenses_month'] ?? 0, 0, ',', '.') }}</div>
-        <div class="stat-icon" style="background:#FFEBEE;">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#C62828" stroke-width="2"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
-        </div>
-    </div>
-</div>
-
-{{-- Main Grid --}}
-<div class="dashboard-grid">
-
-    {{-- Revenue Chart --}}
-    <div class="card chart-card">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem;">
-            <div>
-                <div style="font-weight:600;color:var(--sage-deeper);font-size:0.95rem;">Grafik Pendapatan</div>
-                <div style="font-size:0.75rem;color:#9CA89A;margin-top:2px;">Pendapatan & pengeluaran harian</div>
+    {{-- Top Stats Cards --}}
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        {{-- Income Card --}}
+        <div class="motion-card rounded-[var(--radius-xl)] p-6 text-white shadow-[0_10px_20px_rgba(34,211,238,0.15)] relative overflow-hidden group"
+             style="background: linear-gradient(135deg, var(--accent-teal), var(--accent-cyan));"
+             data-testid="dash-income-card">
+            <div class="absolute right-0 top-0 w-32 h-32 bg-white/10 rounded-full translate-x-12 -translate-y-12 transition-transform group-hover:scale-110"></div>
+            <div class="absolute right-0 bottom-0 w-24 h-24 bg-white/10 rounded-full translate-x-8 translate-y-8 transition-transform group-hover:scale-110"></div>
+            <div class="flex justify-between items-start mb-4 relative z-10">
+                <span class="bg-white/20 px-2 py-1 rounded text-xs font-semibold tracking-wider font-display">/TOTAL</span>
+                <a href="#" class="text-xs text-white/80 hover:text-white underline decoration-dashed underline-offset-2">View Detail</a>
             </div>
-            <div class="period-toggle">
-                <button class="period-btn active" onclick="switchPeriod(this, 7)">7 Hari</button>
-                <button class="period-btn" onclick="switchPeriod(this, 30)">30 Hari</button>
+            <h3 class="text-white/80 font-medium mb-1 relative z-10 font-display">Pemasukan Keseluruhan</h3>
+            <div class="text-3xl font-bold tracking-tight relative z-10 font-mono" style="font-variant-numeric: tabular-nums;">Rp {{ number_format($income ?? 0, 0, ',', '.') }}</div>
+        </div>
+
+        {{-- Expense Card --}}
+        <div class="motion-card rounded-[var(--radius-xl)] p-6 text-white shadow-[0_10px_20px_rgba(124,92,255,0.15)] relative overflow-hidden group"
+             style="background: linear-gradient(135deg, var(--accent-violet), var(--accent-magenta));"
+             data-testid="dash-expense-card">
+            <div class="absolute right-0 top-0 w-32 h-32 bg-white/10 rounded-full translate-x-12 -translate-y-12 transition-transform group-hover:scale-110"></div>
+            <div class="absolute right-0 bottom-0 w-24 h-24 bg-white/10 rounded-full translate-x-8 translate-y-8 transition-transform group-hover:scale-110"></div>
+            <div class="flex justify-between items-start mb-4 relative z-10">
+                <span class="bg-white/20 px-2 py-1 rounded text-xs font-semibold tracking-wider font-display">/TOTAL</span>
+                <a href="#" class="text-xs text-white/80 hover:text-white underline decoration-dashed underline-offset-2">View Detail</a>
             </div>
-        </div>
-        <canvas id="revenueChart" height="100"></canvas>
-    </div>
-
-    {{-- Queue --}}
-    <div class="card queue-card">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1rem;">
-            <div style="font-weight:600;color:var(--sage-deeper);font-size:0.95rem;">Antrian</div>
-            <span class="badge badge-sage">{{ count($queues ?? []) }} aktif</span>
+            <h3 class="text-white/80 font-medium mb-1 relative z-10 font-display">Pengeluaran Operasional</h3>
+            <div class="text-3xl font-bold tracking-tight relative z-10 font-mono" style="font-variant-numeric: tabular-nums;">Rp {{ number_format($expense ?? 0, 0, ',', '.') }}</div>
         </div>
 
-        @forelse($queues ?? [] as $q)
-        <div class="queue-item">
-            <div class="queue-num {{ $loop->first ? 'active-queue' : '' }}">{{ $q->number ?? $loop->iteration }}</div>
-            <div style="flex:1;min-width:0;">
-                <div style="font-size:0.85rem;font-weight:500;color:#2C3328;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
-                    {{ $q->customer_name ?? 'Customer #' . $loop->iteration }}
-                </div>
-                <div style="font-size:0.72rem;color:#9CA89A;">{{ $q->service ?? 'Layanan umum' }}</div>
+        {{-- Profit Card --}}
+        <div class="motion-card rounded-[var(--radius-xl)] p-6 text-white shadow-[0_10px_20px_rgba(30,133,251,0.15)] relative overflow-hidden group"
+             style="background: linear-gradient(135deg, var(--gold-500), var(--gold-600));"
+             data-testid="dash-profit-card">
+            <div class="absolute right-0 top-0 w-32 h-32 bg-black/5 rounded-full translate-x-12 -translate-y-12 transition-transform group-hover:scale-110"></div>
+            <div class="absolute right-0 bottom-0 w-24 h-24 bg-black/5 rounded-full translate-x-8 translate-y-8 transition-transform group-hover:scale-110"></div>
+            <div class="flex justify-between items-start mb-4 relative z-10">
+                <span class="bg-black/10 px-2 py-1 rounded text-xs font-semibold tracking-wider font-display">/NET PROFIT</span>
+                <a href="#" class="text-xs text-white/80 hover:text-white underline decoration-dashed underline-offset-2">View Detail</a>
             </div>
-            <span class="badge {{ $loop->first ? 'badge-green' : 'badge-amber' }}">
-                {{ $loop->first ? 'Dilayani' : 'Tunggu' }}
-            </span>
-        </div>
-        @empty
-        <div style="text-align:center;padding:2rem 0;color:#9CA89A;font-size:0.85rem;">
-            <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#D0DAC8" stroke-width="1.5" style="margin:0 auto 0.5rem;display:block;"><polyline points="12 8 12 12 14 14"/><path d="M3.05 11a9 9 0 1 0 .5-4.5"/></svg>
-            Belum ada antrian
-        </div>
-        @endforelse
-    </div>
-
-    {{-- Recent Orders --}}
-    <div class="card" style="grid-column:1/-1;">
-        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:1.25rem;">
-            <div style="font-weight:600;color:var(--sage-deeper);font-size:0.95rem;">Order Terbaru</div>
-            <a href="{{ route('history.index') }}" class="btn btn-outline btn-sm">Lihat semua</a>
-        </div>
-        <div class="table-wrap">
-            <table class="data-table">
-                <thead>
-                    <tr>
-                        <th>No. Order</th>
-                        <th>Customer</th>
-                        <th>Layanan/Produk</th>
-                        <th>Total</th>
-                        <th>Waktu</th>
-                        <th>Status</th>
-                        <th></th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @forelse($recent_orders ?? [] as $order)
-                    <tr>
-                        <td><span style="font-family:monospace;font-size:0.82rem;color:var(--sage-dark);">#{{ $order->order_number ?? str_pad($loop->iteration, 4, '0', STR_PAD_LEFT) }}</span></td>
-                        <td style="font-weight:500;">{{ $order->customer->name ?? 'Customer' }}</td>
-                        <td style="color:#7A8A78;">{{ $order->items_summary ?? 'Layanan' }}</td>
-                        <td style="font-weight:600;">Rp {{ number_format($order->total ?? 0, 0, ',', '.') }}</td>
-                        <td style="color:#9CA89A;font-size:0.8rem;">{{ $order->created_at?->diffForHumans() ?? '-' }}</td>
-                        <td>
-                            @php $s = $order->status ?? 'done'; @endphp
-                            <span class="badge {{ $s === 'done' ? 'badge-green' : ($s === 'pending' ? 'badge-amber' : 'badge-blue') }}">
-                                {{ ucfirst($s) }}
-                            </span>
-                        </td>
-                        <td>
-                            <a href="{{ route('invoice.show', $order->id ?? 1) }}" class="btn btn-outline btn-sm">Struk</a>
-                        </td>
-                    </tr>
-                    @empty
-                    <tr><td colspan="7" style="text-align:center;color:#9CA89A;padding:2rem;">Belum ada order hari ini</td></tr>
-                    @endforelse
-                </tbody>
-            </table>
+            <h3 class="text-white/80 font-medium mb-1 relative z-10 font-display">Keuntungan Bersih</h3>
+            <div class="text-3xl font-bold tracking-tight relative z-10 font-mono" style="font-variant-numeric: tabular-nums;">Rp {{ number_format($profit ?? 0, 0, ',', '.') }}</div>
         </div>
     </div>
 
-</div>
+    <div class="mb-6 flex justify-between items-end">
+        <h2 class="text-xl font-bold text-[var(--color-text)] tracking-tight font-display motion-card">Performance & Activity</h2>
+    </div>
+
+    {{-- Bottom Section: Chart & Queue --}}
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {{-- Chart Section --}}
+        <x-ui.glass-card variant="default" padding="lg" class="lg:col-span-2 motion-chart h-[400px]" data-testid="dash-chart-card">
+            <div class="flex justify-between items-center mb-6">
+                <h3 class="font-bold text-[var(--color-text)] font-display">Sales vs Expense</h3>
+                <select class="text-xs border border-[var(--color-border)] rounded-[var(--radius-sm)] text-[var(--color-text-muted)] px-2 py-1 bg-[var(--color-bg-sunken)] focus:outline-none focus:ring-1 focus:ring-[var(--color-primary)]">
+                    <option>Line Chart</option>
+                    <option>Bar Chart</option>
+                </select>
+            </div>
+            <div class="relative w-full h-[300px]">
+                <canvas id="financeChart"></canvas>
+            </div>
+        </x-ui.glass-card>
+
+        {{-- Active Queue Section --}}
+        <x-ui.glass-card variant="default" padding="lg" class="motion-queue flex flex-col h-[400px]" data-testid="dash-queue-card">
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="font-bold text-[var(--color-text)] flex items-center gap-2 font-display">
+                    Antrian Aktif
+                    <span class="text-white text-[10px] px-1.5 py-0.5 rounded-full font-mono" style="background: var(--accent-rose);">{{ count($queues ?? []) }}</span>
+                </h3>
+            </div>
+
+            <div class="flex-1 overflow-y-auto pr-2" style="-webkit-overflow-scrolling: touch;">
+                @forelse($queues ?? [] as $queue)
+                    <div class="flex items-center gap-4 py-3 border-b border-[var(--color-border-subtle)] last:border-0 hover:bg-[var(--color-bg-elevated)]/50 transition rounded-[var(--radius-sm)] px-2 -mx-2">
+                        <div class="w-10 h-10 rounded-full flex items-center justify-center font-bold text-white text-sm shrink-0"
+                             style="background: linear-gradient(135deg, var(--accent-violet), var(--accent-cyan));">
+                            {{ strtoupper(substr($queue->user->name ?? '?', 0, 2)) }}
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <p class="text-sm font-semibold text-[var(--color-text)] truncate font-display">{{ $queue->user->name ?? 'Guest' }} <span class="text-xs text-[var(--color-primary)] ml-1 font-sans">• New order</span></p>
+                            <p class="text-[11px] text-[var(--color-text-muted)] truncate font-mono" style="font-variant-numeric: tabular-nums;">Q-NO: {{ $queue->queue_number }} — Rp
+                                {{ number_format($queue->total_price ?? 0, 0, ',', '.') }}
+                            </p>
+                        </div>
+                        <div class="text-right shrink-0">
+                            @if($queue->status === 'processing')
+                                <x-ui.badge variant="warning" size="xs">{{ ucfirst($queue->status) }}</x-ui.badge>
+                            @else
+                                <x-ui.badge variant="info" size="xs">{{ ucfirst($queue->status) }}</x-ui.badge>
+                            @endif
+                            <p class="text-[10px] text-[var(--color-text-muted)] mt-1">
+                                {{ optional($queue->created_at)->diffForHumans() ?? 'Just now' }}
+                            </p>
+                        </div>
+                    </div>
+                @empty
+                    <div class="h-full flex flex-col items-center justify-center pb-8">
+                        <div class="w-16 h-16 mb-3 rounded-full flex items-center justify-center" style="background: var(--color-bg-sunken);">
+                            <svg class="w-8 h-8 text-[var(--color-text-muted)]" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="1.5">
+                                <path stroke-linecap="round" stroke-linejoin="round"
+                                    d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4" />
+                            </svg>
+                        </div>
+                        <p class="text-sm text-[var(--color-text-muted)]">Tidak ada antrean</p>
+                    </div>
+                @endforelse
+            </div>
+        </x-ui.glass-card>
+    </div>
 
 @endsection
-
-@push('scripts')
-<script>
-const labels7  = @json($chart_labels_7 ?? ['Sen','Sel','Rab','Kam','Jum','Sab','Min']);
-const revenue7 = @json($chart_revenue_7 ?? [320000,480000,390000,520000,610000,750000,430000]);
-const expense7 = @json($chart_expense_7 ?? [120000,180000,90000,200000,150000,210000,110000]);
-
-const labels30  = @json($chart_labels_30 ?? array_map(fn($d) => date('d/m', strtotime("-$d days")), range(29,0)));
-const revenue30 = @json($chart_revenue_30 ?? array_fill(0, 30, 0));
-const expense30 = @json($chart_expense_30 ?? array_fill(0, 30, 0));
-
-let chart;
-
-function buildChart(labels, revenue, expense) {
-    const ctx = document.getElementById('revenueChart').getContext('2d');
-    if (chart) chart.destroy();
-    chart = new Chart(ctx, {
-        type: 'line',
-        data: {
-            labels,
-            datasets: [
-                {
-                    label: 'Pendapatan',
-                    data: revenue,
-                    borderColor: '#96A78D',
-                    backgroundColor: 'rgba(150,167,141,0.08)',
-                    borderWidth: 2.5,
-                    pointRadius: 3,
-                    pointBackgroundColor: '#96A78D',
-                    tension: 0.4,
-                    fill: true,
-                },
-                {
-                    label: 'Pengeluaran',
-                    data: expense,
-                    borderColor: '#E07070',
-                    backgroundColor: 'rgba(224,112,112,0.05)',
-                    borderWidth: 2,
-                    pointRadius: 3,
-                    pointBackgroundColor: '#E07070',
-                    tension: 0.4,
-                    fill: true,
-                    borderDash: [5,4],
-                }
-            ]
-        },
-        options: {
-            responsive: true,
-            plugins: {
-                legend: { position: 'bottom', labels: { font: { family: 'DM Sans', size: 12 }, padding: 16 } },
-                tooltip: {
-                    callbacks: {
-                        label: ctx => ' Rp ' + ctx.raw.toLocaleString('id-ID')
-                    }
-                }
-            },
-            scales: {
-                y: {
-                    ticks: {
-                        callback: v => 'Rp ' + (v/1000).toFixed(0) + 'k',
-                        font: { family: 'DM Sans', size: 11 }
-                    },
-                    grid: { color: 'rgba(0,0,0,0.04)' }
-                },
-                x: {
-                    ticks: { font: { family: 'DM Sans', size: 11 } },
-                    grid: { display: false }
-                }
-            }
-        }
-    });
-}
-
-function switchPeriod(btn, days) {
-    document.querySelectorAll('.period-btn').forEach(b => b.classList.remove('active'));
-    btn.classList.add('active');
-    if (days === 7) buildChart(labels7, revenue7, expense7);
-    else buildChart(labels30, revenue30, expense30);
-}
-
-buildChart(labels7, revenue7, expense7);
-</script>
-@endpush
