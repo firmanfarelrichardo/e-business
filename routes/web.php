@@ -92,8 +92,27 @@ Route::apiResource('brands', BrandController::class);
 Route::apiResource('products', ProductController::class);
 Route::apiResource('services', ServiceController::class);
 
-Route::apiResource('product-brands', ProductBrandController::class);
-Route::apiResource('batches', BatchController::class);
+// ================= USER =================
+Route::prefix('users')->group(function () {
+    Route::get('/', [UserController::class, 'index']);
+    Route::post('/', [UserController::class, 'store']);
+    Route::get('/{id}', [UserController::class, 'show']);
+    Route::put('/{id}', [UserController::class, 'update']);
+    Route::delete('/{id}', [UserController::class, 'destroy']);
+    Route::patch('/{id}/toggle-active', [UserController::class, 'toggleActive']);
+});
+
+// ================= EXPENSE =================
+Route::apiResource('expenses', ExpenseController::class);
+
+// ================= DASHBOARD =================
+Route::prefix('dashboard')->group(function () {
+    Route::get('/', [DashboardController::class, 'index']);
+    Route::get('/chart', [DashboardController::class, 'chart']);
+    Route::get('/reports/orders', [DashboardController::class, 'reportOrders']);
+    Route::get('/reports/top-products', [DashboardController::class, 'reportTopProducts']);
+    Route::get('/reports/top-services', [DashboardController::class, 'reportTopServices']);
+});
 
 Route::apiResource('orders', ApiOrderController::class)->except(['update', 'destroy']);
 Route::put('orders/{id}/status', [ApiOrderController::class, 'updateStatus']);
